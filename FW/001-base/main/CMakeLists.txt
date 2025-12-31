@@ -2,7 +2,8 @@
 file(GLOB MAIN_C_CXX_LD_FILES *.h *.cpp *.c  *.hpp)
 idf_component_register(SRCS ${MAIN_C_CXX_LD_FILES}
                        PRIV_REQUIRES fatfs
-                       INCLUDE_DIRS ".")
+                       INCLUDE_DIRS "."
+                       WHOLE_ARCHIVE TRUE)
 
 
 add_compile_options( -Wno-error=clobbered -Wno-clobbered -Wno-error=cpp  )
