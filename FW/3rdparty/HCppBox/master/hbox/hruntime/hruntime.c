@@ -1,0 +1,804 @@
+/***************************************************************
+ * Name:      hruntime.c
+ * Purpose:   实现hruntime接口
+ * Author:    HYH (hyhsystem.cn)
+ * Created:   2025-04-19
+ * Copyright: HYH (hyhsystem.cn)
+ * License:   MIT
+ **************************************************************/
+#include "hruntime.h"
+#include "hsoftwaretimer.h"
+#include "hdriverframework.h"
+#include "h3rdparty.h"
+#include "hevent.h"
+#include "hsoftplc.h"
+#include "stdbool.h"
+#include "stdint.h"
+#include "stdlib.h"
+
+enum
+{
+    HRUNTIME_INTERNAL_FLAG_LOWLEVEL_INIT_DONE=0,
+    HRUNTIME_INTERNAL_FLAG_INIT_DONE,
+    HRUNTIME_INTERNAL_FLAG_LOOP_BEGIN,
+    HRUNTIME_INTERNAL_FLAG_LOOP_END,
+    HRUNTIME_INTERNAL_FLAG_LOOP_DISABLE_SOFTWARETIMER,
+    HRUNTIME_INTERNAL_FLAG_LOOP_DISABLE_SOFTWATCHDOG,
+    HRUNTIME_INTERNAL_FLAG_LOOP_SECTION_CACHE_TABLE_SORT_OK,
+    HRUNTIME_INTERNAL_FLAG_END
+};
+
+static uint8_t hruntime_internal_flag[(((size_t)HRUNTIME_INTERNAL_FLAG_END)+7)/8]= {0};
+
+static void hruntime_internal_flag_set(size_t flag)
+{
+    size_t flag_byte=flag/8;
+    size_t flag_bit=flag%8;
+    if(flag_byte < sizeof(hruntime_internal_flag))
+    {
+        hruntime_internal_flag[flag_byte] |= (1 << flag_bit);
+    }
+}
+
+static void hruntime_internal_flag_clear(size_t flag)
+{
+    size_t flag_byte=flag/8;
+    size_t flag_bit=flag%8;
+    if(flag_byte < sizeof(hruntime_internal_flag))
+    {
+        hruntime_internal_flag[flag_byte] &= (~(1 << flag_bit));
+    }
+}
+
+static bool hruntime_internal_flag_is_set(size_t flag)
+{
+    bool ret=false;
+    size_t flag_byte=flag/8;
+    size_t flag_bit=flag%8;
+    if(flag_byte < sizeof(hruntime_internal_flag))
+    {
+        ret=(0!=(hruntime_internal_flag[flag_byte] & (1 << flag_bit)));
+    }
+    return ret;
+}
+
+
+void hruntime_init_lowlevel()
+{
+    if(hruntime_init_lowlevel_done())
+    {
+        return;
+    }
+
+    /*
+     * 初始化第三方库
+     */
+    h3rdparty_init();
+
+    //标记初始化完成
+    hruntime_internal_flag_set(HRUNTIME_INTERNAL_FLAG_LOWLEVEL_INIT_DONE);
+}
+
+bool hruntime_init_lowlevel_done(void)
+{
+    return hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_LOWLEVEL_INIT_DONE);
+}
+
+void hruntime_init()
+{
+    if(!hruntime_init_lowlevel_done())
+    {
+        hruntime_init_lowlevel();
+    }
+
+    if(hruntime_init_done())
+    {
+        return;
+    }
+
+#ifdef HRUNTIME_USING_INIT_SECTION
+    HRUNTIME_INIT_INVOKE();
+#endif // HRUNTIME_USING_INIT_SECTION
+
+    /*
+     * 系统初始化完成
+     */
+    {
+        heventslots_t *slots_init=heventslots_get_slots_from_table(HEVENTSLOTS_SYSTEM_SLOTS_INIT);
+        if(slots_init!=NULL)
+        {
+            heventslots_emit_signal(slots_init,NULL);
+        }
+    }
+
+#if defined(HSOFTPLC)
+    hsoftplc_init();
+#endif
+
+    //标记初始化完成
+    hruntime_internal_flag_set(HRUNTIME_INTERNAL_FLAG_INIT_DONE);
+
+}
+
+bool hruntime_init_done(void)
+{
+    return hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_INIT_DONE);
+}
+
+#if defined(HRUNTIME_USING_LOOP_CACHE_TABLE)
+#define HRUNTIME_USING_LOOP_SECTION_CACHE   1
+#endif
+
+void hruntime_loop()
+{
+    if(!hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_INIT_DONE))
+    {
+        hruntime_init();
+    }
+
+
+    hruntime_internal_flag_clear(HRUNTIME_INTERNAL_FLAG_LOOP_END);
+    hruntime_internal_flag_set(HRUNTIME_INTERNAL_FLAG_LOOP_BEGIN);
+
+#ifdef HRUNTIME_USING_LOOP_SECTION
+#ifdef HRUNTIME_USING_LOOP_SECTION_CACHE
+    HRUNTIME_LOOP_CACHE_INVOKE();
+#else
+    HRUNTIME_LOOP_INVOKE();
+#endif
+#endif // HRUNTIME_USING_LOOP_SECTION
+
+    /*
+     * 系统循环
+     */
+    {
+        heventslots_t *slots_loop=heventslots_get_slots_from_table(HEVENTSLOTS_SYSTEM_SLOTS_LOOP);
+        if(slots_loop!=NULL)
+        {
+            heventslots_emit_signal(slots_loop,NULL);
+        }
+    }
+
+    /*
+     * 工作队列
+     */
+    {
+        heventloop_t *loop_workqueue=heventloop_get_loop_from_table(HEVENTLOOP_SYSTEM_LOOP_WORKQUEUE);
+        if(loop_workqueue!=NULL)
+        {
+            heventloop_process_event(loop_workqueue);
+        }
+    }
+
+#ifndef HRUNTIME_NO_SOFTWARETIMER
+    /*
+     * 定时器循环
+     */
+    if(!hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_LOOP_DISABLE_SOFTWARETIMER))
+    {
+        hsoftwaretimer_loop_hruntime();
+    }
+#endif // HRUNTIME_NO_SOFTWARETIMER
+
+#ifndef HRUNTIME_NO_SOFTWATCHDOG
+    /*
+     * 软件看门狗
+     */
+    if(!hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_LOOP_DISABLE_SOFTWATCHDOG))
+    {
+        if(hwatchdog_is_valid())
+        {
+            HWATCHDOG_FEED();
+        }
+        else
+        {
+            hruntime_loop_enable_softwatchdog(false);
+        }
+    }
+#endif // HRUNTIME_NO_SOFTWATCHDOG
+
+#if !defined(HDEFAULTS_SYSCALL_NO_IMPLEMENTATION) && !defined(HDEFAULTS_SYSCALL_NO_HGETTIMEOFDAY) && !defined(HGETTIMEOFDAY)
+    /*
+     * 调用一次hgettimeofday检查内部变量是否溢出
+     */
+    {
+        hgettimeofday_timeval_t tv;
+        hgettimeofday_timezone_t tz;
+        hgettimeofday(&tv,&tz);
+    }
+#endif
+
+#if defined(HSOFTPLC)
+    hsoftplc_loop();
+#endif
+
+    hruntime_internal_flag_clear(HRUNTIME_INTERNAL_FLAG_LOOP_BEGIN);
+    hruntime_internal_flag_set(HRUNTIME_INTERNAL_FLAG_LOOP_END);
+
+}
+
+bool hruntime_loop_begin(void)
+{
+    return hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_LOOP_BEGIN);
+}
+
+bool hruntime_loop_end(void)
+{
+    return hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_LOOP_END);
+}
+
+void hruntime_loop_enable_softwaretimer(bool enable)
+{
+    if(enable)
+    {
+        hruntime_internal_flag_clear(HRUNTIME_INTERNAL_FLAG_LOOP_DISABLE_SOFTWARETIMER);
+    }
+    else
+    {
+        hruntime_internal_flag_set(HRUNTIME_INTERNAL_FLAG_LOOP_DISABLE_SOFTWARETIMER);
+    }
+}
+
+void hruntime_loop_enable_softwatchdog(bool enable)
+{
+    if(enable)
+    {
+        hruntime_internal_flag_clear(HRUNTIME_INTERNAL_FLAG_LOOP_DISABLE_SOFTWATCHDOG);
+    }
+    else
+    {
+        hruntime_internal_flag_set(HRUNTIME_INTERNAL_FLAG_LOOP_DISABLE_SOFTWATCHDOG);
+    }
+}
+
+void hruntime_function_array_invoke(const hruntime_function_t *array_base,size_t array_size)
+{
+    if(array_base==NULL || array_size == 0)
+    {
+        return;
+    }
+
+    size_t priority_min=0;
+    size_t priority_max=0;
+    for(size_t i=0; i<array_size; i++)
+    {
+        if(array_base[i].priority < priority_min)
+        {
+            priority_min=array_base[i].priority;
+        }
+        if(array_base[i].priority > priority_max)
+        {
+            priority_max=array_base[i].priority;
+        }
+    }
+
+    for(size_t i=priority_min; priority_min<=priority_max;)
+    {
+        for(size_t j=0; j<array_size; j++)
+        {
+            if(array_base[j].priority==i)
+            {
+                if(array_base[j].entry!=NULL)
+                {
+                    array_base[j].entry(&array_base[j]);
+                }
+            }
+        }
+
+        if(i==priority_max)
+        {
+            break;
+        }
+
+        {
+            size_t priority=priority_max;
+            for(size_t j=0; j<array_size; j++)
+            {
+                if(array_base[j].priority > i && array_base[j].priority < priority )
+                {
+                    priority=array_base[j].priority;
+                }
+            }
+            i=priority;
+        }
+    }
+
+}
+
+#if defined(HRUNTIME_USING_LOOP_CACHE_TABLE)
+#ifndef HRUNTIME_USING_LOOP_CACHE_TABLE_ITEM_COUNT
+#define HRUNTIME_USING_LOOP_CACHE_TABLE_ITEM_COUNT   16
+#endif
+static hruntime_function_t hruntime_loop_cache_table[HRUNTIME_USING_LOOP_CACHE_TABLE_ITEM_COUNT]= {0};
+
+static void hruntime_loop_cache_table_sort(hruntime_function_t *array_base,size_t array_size)
+{
+    if(array_base==NULL || array_size == 0)
+    {
+        return;
+    }
+
+    /*
+     * 冒泡排序
+     */
+    bool is_sorted=false;
+    while(!is_sorted)
+    {
+        is_sorted=true;
+        for(size_t i=0; i<array_size; i++)
+        {
+            if(i==(array_size-1) || array_base[i].entry==NULL || array_base[i+1].entry==NULL)
+            {
+                break;
+            }
+            if(array_base[i].priority > array_base[i+1].priority)
+            {
+                /*
+                 * 交换项，标记为未排序完成
+                 */
+                hruntime_function_t temp=array_base[i+1];
+                array_base[i+1]=array_base[i];
+                array_base[i]=temp;
+                is_sorted=false;
+            }
+        }
+    }
+}
+
+#endif
+
+void hruntime_function_loop_cache_invoke(const hruntime_function_t *array_base,size_t array_size)
+{
+    if(array_base==NULL || array_size == 0)
+    {
+        return;
+    }
+#if defined(HRUNTIME_USING_LOOP_CACHE_TABLE)
+    if(hruntime_loop_cache_table[0].entry==NULL ||  !hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_LOOP_SECTION_CACHE_TABLE_SORT_OK))
+    {
+
+        //设置标志
+        hruntime_internal_flag_set(HRUNTIME_INTERNAL_FLAG_LOOP_SECTION_CACHE_TABLE_SORT_OK);
+
+        if(hruntime_loop_cache_table[0].entry==NULL)
+        {
+            //复制表
+            for(size_t i=0; i< array_size && i < sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0]); i++)
+            {
+                hruntime_loop_cache_table[i]=array_base[i];
+            }
+        }
+
+
+        //表排序
+        hruntime_loop_cache_table_sort(hruntime_loop_cache_table,sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0]));
+    }
+
+    {
+        //执行循环函数
+        for(size_t i=0; i<sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0]); i++)
+        {
+            if(!hruntime_internal_flag_is_set(HRUNTIME_INTERNAL_FLAG_LOOP_SECTION_CACHE_TABLE_SORT_OK))
+            {
+                /*
+                 * 需要重新排序
+                 */
+                break;
+            }
+            if(hruntime_loop_cache_table[i].entry==NULL)
+            {
+                break;
+            }
+            hruntime_loop_cache_table[i].entry(&hruntime_loop_cache_table[i]);
+        }
+    }
+
+#endif
+}
+
+bool hruntime_function_loop_cache_table_add(const hruntime_function_t * hruntime_function)
+{
+    bool ret=false;
+    if(hruntime_function==NULL || hruntime_function->entry == NULL)
+    {
+        return ret;
+    }
+#if defined(HRUNTIME_USING_LOOP_CACHE_TABLE)
+    for(size_t i=0; i<sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0]); i++)
+    {
+        if(hruntime_loop_cache_table[i].entry==hruntime_function->entry && hruntime_loop_cache_table[i].usr==hruntime_function->usr && hruntime_loop_cache_table[i].priority==hruntime_function->priority)
+        {
+            //不允许添加多个相同的运行函数
+            break;
+        }
+        if(hruntime_loop_cache_table[i].entry== NULL)
+        {
+            hruntime_loop_cache_table[i]=(*hruntime_function);
+            ret=true;
+            break;
+        }
+    }
+#endif
+    if(ret)
+    {
+        hruntime_internal_flag_clear(HRUNTIME_INTERNAL_FLAG_LOOP_SECTION_CACHE_TABLE_SORT_OK);
+    }
+    return ret;
+}
+
+bool hruntime_function_loop_cache_table_remove(const hruntime_function_t * hruntime_function)
+{
+    bool ret=false;
+    if(hruntime_function==NULL || hruntime_function->entry == NULL)
+    {
+        return ret;
+    }
+#if defined(HRUNTIME_USING_LOOP_CACHE_TABLE)
+    for(size_t i=0; i<sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0]); i++)
+    {
+        if(hruntime_loop_cache_table[i].entry==hruntime_function->entry && hruntime_loop_cache_table[i].usr==hruntime_function->usr && hruntime_loop_cache_table[i].priority==hruntime_function->priority)
+        {
+
+            for(size_t j=i; j<(sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0])-1); j++)
+            {
+                hruntime_loop_cache_table[j]=hruntime_loop_cache_table[j+1];
+            }
+            hruntime_loop_cache_table[(sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0])-1)].entry=NULL;
+            hruntime_loop_cache_table[(sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0])-1)].priority=0;
+            hruntime_loop_cache_table[(sizeof(hruntime_loop_cache_table)/sizeof(hruntime_loop_cache_table[0])-1)].usr=NULL;
+
+            ret=true;
+            break;
+        }
+    }
+#endif
+    if(ret)
+    {
+        hruntime_internal_flag_clear(HRUNTIME_INTERNAL_FLAG_LOOP_SECTION_CACHE_TABLE_SORT_OK);
+    }
+    return ret;
+}
+
+#if defined(HRUNTIME_SYMBOL_SCAN) || defined(HRUNTIME_NO_SYMBOL_TABLE)
+#ifdef HRUNTIME_USING_SYMBOL_TABLE
+#undef HRUNTIME_USING_SYMBOL_TABLE
+#endif // HRUNTIME_USING_SYMBOL_TABLE
+#endif // HRUNTIME_SYMBOL_SCAN
+
+#ifdef HRUNTIME_USING_SYMBOL_TABLE
+
+#include "symbol/hbox_symbol.c"
+#include "symbol/hbox_h3rdparty_symbol.c"
+#include "symbol/libc_symbol.c"
+
+const struct
+{
+    const hruntime_symbol_t *   array_base;
+    size_t                      array_size;
+}
+hruntime_symbol_array_list[]=
+{
+    {
+        hruntime_hbox_symbol,
+        sizeof(hruntime_hbox_symbol)/sizeof(hruntime_hbox_symbol[0])
+    },
+    {
+        hruntime_hbox_h3rdparty_symbol,
+        sizeof(hruntime_hbox_h3rdparty_symbol)/sizeof(hruntime_hbox_h3rdparty_symbol[0])
+    },
+    {
+        hruntime_libc_symbol,
+        sizeof(hruntime_libc_symbol)/sizeof(hruntime_libc_symbol[0])
+    },
+    {
+        //结束
+        NULL,
+        0
+    }
+};
+
+#endif
+
+const hruntime_symbol_t *hruntime_symbol_find(const char *name)
+{
+    const hruntime_symbol_t *ret=NULL;
+    if(name==NULL || strlen(name) == 0)
+    {
+        return ret;
+    }
+
+#ifdef HRUNTIME_USING_SYMBOL_DYNAMIC_TABLE
+    if(ret==NULL)
+    {
+        ret=hruntime_symbol_dynamic_find(name);
+    }
+#endif // HRUNTIME_USING_SYMBOL_DYNAMIC_TABLE
+
+#ifdef HRUNTIME_USING_SYMBOL_TABLE
+    if(ret==NULL)
+    {
+        for(size_t i=0; i<sizeof(hruntime_symbol_array_list)/sizeof(hruntime_symbol_array_list[0]); i++)
+        {
+            const hruntime_symbol_t *   array_base=hruntime_symbol_array_list[i].array_base;
+            size_t                      array_size=hruntime_symbol_array_list[i].array_size;
+            if(array_base!=NULL && array_size!=0)
+            {
+                for(size_t i=0; i<array_size; i++)
+                {
+                    if(array_base[i].symbol_name!=NULL && strcmp(array_base[i].symbol_name,name)==0)
+                    {
+                        ret=&array_base[i];
+                        break;
+                    }
+                }
+            }
+            if(ret!=NULL)
+            {
+                break;
+            }
+        }
+    }
+#endif
+
+    if(ret==NULL)
+    {
+        const hruntime_symbol_t *   array_base=NULL;
+        size_t                      array_size=0;
+#ifdef HRUNTIME_USING_SYMBOL_SECTION
+#if defined(HCOMPILER_ARMCC) || defined(HCOMPILER_ARMCLANG)
+        {
+            array_base=(hruntime_symbol_t *)&HRuntimeLoop$$Base;
+            array_size=(((uintptr_t)(hruntime_symbol_t *)&HRuntimeLoop$$Limit)-((uintptr_t)(hruntime_symbol_t *)&HRuntimeLoop$$Base))/sizeof(hruntime_symbol_t);
+        }
+#elif  defined(HCOMPILER_GCC) || defined(HCOMPILER_CLANG)
+        {
+            array_base=__hruntime_symbol_start;
+            array_size=(((uintptr_t)__hruntime_symbol_end)-((uintptr_t)__hruntime_symbol_start))/sizeof(hruntime_symbol_t);
+        }
+#endif
+#endif // HRUNTIME_USING_SYMBOL_SECTION
+        if(array_base!=NULL && array_size!=0)
+        {
+            for(size_t i=0; i<array_size; i++)
+            {
+                if(array_base[i].symbol_name!=NULL && strcmp(array_base[i].symbol_name,name)==0)
+                {
+                    ret=&array_base[i];
+                    break;
+                }
+            }
+        }
+
+    }
+    return ret;
+}
+
+static hdoublylinkedlist_head_t hruntime_symbol_dynamic_table_list_head= {0};
+typedef struct
+{
+    hdoublylinkedlist_head_t list_head;
+    const hruntime_symbol_t *table_start;
+    size_t table_size;
+} hruntime_symbol_dynamic_table_list_item_t;
+bool hruntime_symbol_dynamic_table_register(const hruntime_symbol_t *table_start,size_t table_size)
+{
+    bool ret=false;
+    if(table_start==NULL || table_size == 0)
+    {
+        return ret;
+    }
+
+    hruntime_symbol_dynamic_table_list_item_t *item=(hruntime_symbol_dynamic_table_list_item_t *)hdefaults_malloc(sizeof(hruntime_symbol_dynamic_table_list_item_t),NULL);
+    if(item==NULL)
+    {
+        return ret;
+    }
+
+    item->table_size=table_size;
+    item->table_start=table_start;
+
+    hdefaults_mutex_lock(NULL);
+    ret=true;
+    if(hdoublylinkedlist_is_empty(&hruntime_symbol_dynamic_table_list_head))
+    {
+        hdoublylinkedlist_init(&hruntime_symbol_dynamic_table_list_head);
+        //当头为空,直接添加到链表头上
+        hdoublylinkedlist_add_back(&hruntime_symbol_dynamic_table_list_head,&item->list_head);
+        //由于仅有一个项，应当初始化为空
+        hdoublylinkedlist_init(&item->list_head);
+    }
+    else
+    {
+        //获取真正的链表头
+        hdoublylinkedlist_head_t *list_head=hruntime_symbol_dynamic_table_list_head.next;
+        //添加当前项到链表
+        hdoublylinkedlist_add_front(list_head,&item->list_head);
+    }
+    hdefaults_mutex_unlock(NULL);
+    if(!ret)
+    {
+        hdefaults_free(item,NULL);
+    }
+    return ret;
+}
+
+bool hruntime_symbol_dynamic_table_unregister(const hruntime_symbol_t *table_start,size_t table_size)
+{
+    bool ret=false;
+    if(table_start==NULL || table_size == 0)
+    {
+        return ret;
+    }
+
+    if(hdoublylinkedlist_is_empty(&hruntime_symbol_dynamic_table_list_head))
+    {
+        return ret;
+    }
+
+    //获取真正的链表头
+    hdoublylinkedlist_head_t *list_head=hruntime_symbol_dynamic_table_list_head.next;
+    hruntime_symbol_dynamic_table_list_item_t *item=NULL;
+    hdefaults_mutex_lock(NULL);
+    HDOUBLYLINKEDLIST_FOREACH(list_head,list_item)
+    {
+        const hruntime_symbol_dynamic_table_list_item_t * temp=GET_STRUCT_PTR_BY_MEMBER_PTR(list_item,hruntime_symbol_dynamic_table_list_item_t,list_head);
+        if(temp !=NULL && (temp->table_start==table_start && temp->table_size==table_size))
+        {
+            item=(hruntime_symbol_dynamic_table_list_item_t *)temp;
+            break;
+        }
+    }
+
+    if(item!=NULL)
+    {
+        if(list_head==&item->list_head)
+        {
+            //当前项是链表头
+            if(hdoublylinkedlist_is_empty(list_head))
+            {
+                //重新恢复为无链表项的状态
+                hdoublylinkedlist_init(&hruntime_symbol_dynamic_table_list_head);
+            }
+            else
+            {
+                //使用下一项作为新的链表头
+                hruntime_symbol_dynamic_table_list_head.next=list_head->next;
+                hruntime_symbol_dynamic_table_list_head.prev=list_head->next;
+            }
+        }
+        hdoublylinkedlist_remove(&item->list_head);
+        hdefaults_free(item,NULL);
+        item=NULL;
+        ret=true;
+    }
+
+    hdefaults_mutex_unlock(NULL);
+    return ret;
+}
+
+const hruntime_symbol_t *hruntime_symbol_dynamic_find(const char *name)
+{
+    const hruntime_symbol_t * ret=NULL;
+    if(name==NULL || strlen(name) == 0)
+    {
+        return ret;
+    }
+
+    if(hdoublylinkedlist_is_empty(&hruntime_symbol_dynamic_table_list_head))
+    {
+        return ret;
+    }
+
+    //获取真正的链表头
+    hdoublylinkedlist_head_t *list_head=hruntime_symbol_dynamic_table_list_head.next;
+    hdefaults_mutex_lock(NULL);
+    HDOUBLYLINKEDLIST_FOREACH(list_head,list_item)
+    {
+        const hruntime_symbol_dynamic_table_list_item_t * temp=GET_STRUCT_PTR_BY_MEMBER_PTR(list_item,hruntime_symbol_dynamic_table_list_item_t,list_head);
+        if(temp!=NULL && temp->table_start!=NULL && temp->table_size!=0)
+        {
+            for(size_t i=0; i< temp->table_size; i++)
+            {
+                if(temp->table_start[i].symbol_name!=NULL && strcmp(name,temp->table_start[i].symbol_name)==0)
+                {
+                    ret=&temp->table_start[i];
+                    /*
+                     * 即便已查找到符号，仍然需要继续查找，以最后一个查找到的符号为准
+                     */
+                }
+            }
+        }
+    }
+    hdefaults_mutex_unlock(NULL);
+    return ret;
+}
+
+size_t hruntime_symbol_enum(uint32_t type,hruntime_symbol_enum_callback_t callback,void *usr)
+{
+    size_t ret=0;
+    if((type&HRUNTIME_SYMBOL_ENUM_TYPE_TABLE)!=0)
+    {
+#ifdef HRUNTIME_USING_SYMBOL_TABLE
+        for(size_t i=0; i<sizeof(hruntime_symbol_array_list)/sizeof(hruntime_symbol_array_list[0]); i++)
+        {
+            const hruntime_symbol_t *   array_base=hruntime_symbol_array_list[i].array_base;
+            size_t                      array_size=hruntime_symbol_array_list[i].array_size;
+            if(array_base!=NULL && array_size!=0)
+            {
+                for(size_t i=0; i<array_size; i++)
+                {
+                    if(array_base[i].symbol_name!=NULL)
+                    {
+                        ret++;
+                        if(callback!=NULL)
+                        {
+                            callback(HRUNTIME_SYMBOL_ENUM_TYPE_TABLE,&array_base[i],usr);
+                        }
+                    }
+                }
+            }
+        }
+#endif
+    }
+    if((type&HRUNTIME_SYMBOL_ENUM_TYPE_TABLE_DYNAMIC)!=0)
+    {
+        if(!hdoublylinkedlist_is_empty(&hruntime_symbol_dynamic_table_list_head))
+        {
+            //获取真正的链表头
+            hdoublylinkedlist_head_t *list_head=hruntime_symbol_dynamic_table_list_head.next;
+            hdefaults_mutex_lock(NULL);
+            HDOUBLYLINKEDLIST_FOREACH(list_head,list_item)
+            {
+                const hruntime_symbol_dynamic_table_list_item_t * temp=GET_STRUCT_PTR_BY_MEMBER_PTR(list_item,hruntime_symbol_dynamic_table_list_item_t,list_head);
+                if(temp!=NULL && temp->table_start!=NULL && temp->table_size!=0)
+                {
+                    for(size_t i=0; i< temp->table_size; i++)
+                    {
+                        if(temp->table_start[i].symbol_name!=NULL)
+                        {
+                            ret++;
+                            if(callback!=NULL)
+                            {
+                                callback(HRUNTIME_SYMBOL_ENUM_TYPE_TABLE_DYNAMIC,&temp->table_start[i],usr);
+                            }
+                        }
+                    }
+                }
+            }
+            hdefaults_mutex_unlock(NULL);
+        }
+    }
+    if((type&HRUNTIME_SYMBOL_ENUM_TYPE_TABLE_SECTION)!=0)
+    {
+        const hruntime_symbol_t *   array_base=NULL;
+        size_t                      array_size=0;
+#ifdef HRUNTIME_USING_SYMBOL_SECTION
+#if defined(HCOMPILER_ARMCC) || defined(HCOMPILER_ARMCLANG)
+        {
+            array_base=(hruntime_symbol_t *)&HRuntimeLoop$$Base;
+            array_size=(((uintptr_t)(hruntime_symbol_t *)&HRuntimeLoop$$Limit)-((uintptr_t)(hruntime_symbol_t *)&HRuntimeLoop$$Base))/sizeof(hruntime_symbol_t);
+        }
+#elif  defined(HCOMPILER_GCC) || defined(HCOMPILER_CLANG)
+        {
+            array_base=__hruntime_symbol_start;
+            array_size=(((uintptr_t)__hruntime_symbol_end)-((uintptr_t)__hruntime_symbol_start))/sizeof(hruntime_symbol_t);
+        }
+#endif
+#endif // HRUNTIME_USING_SYMBOL_SECTION
+        if(array_base!=NULL && array_size!=0)
+        {
+            for(size_t i=0; i<array_size; i++)
+            {
+                if(array_base[i].symbol_name!=NULL)
+                {
+                    ret++;
+                    if(callback!=NULL)
+                    {
+                        callback(HRUNTIME_SYMBOL_ENUM_TYPE_TABLE_SECTION,&array_base[i],usr);
+                    }
+                }
+            }
+        }
+    }
+    return ret;
+}

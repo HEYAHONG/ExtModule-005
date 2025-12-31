@@ -1,0 +1,5 @@
+*.o
+build
+*~
+.scon*
+__pycache__
