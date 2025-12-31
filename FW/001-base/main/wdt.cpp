@@ -22,7 +22,7 @@ static void hw_feed()
 /*
  * 初始化
  */
-void  watchdog_init(const hruntime_function_t *func)
+static void  watchdog_init(const hruntime_function_t *func)
 {
     ESP_LOGI(TAG,"init!");
 	//设置好看门狗
@@ -34,7 +34,7 @@ HRUNTIME_INIT_EXPORT(watchdog,0,watchdog_init,NULL);
 /*
  * 循环
  */
-void  watchdog_loop(const hruntime_function_t *func)
+static void  watchdog_loop(const hruntime_function_t *func)
 {
 
 }
