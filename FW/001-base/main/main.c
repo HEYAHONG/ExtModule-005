@@ -7,12 +7,27 @@
 #include "freertos/task.h"
 static const char *TAG = "esp32 main";
 
+void vApplicationIdleHook( void )
+{
+    /*
+     * 空闲钩子喂狗
+     */
+    if(hwatchdog_is_valid())
+    {
+        HWATCHDOG_FEED();
+    }
+}
+
 void app_main(void)
 {
     hcpprt_init();
     while(true)
     {
-        hcpprt_loop();
+        size_t count=50;
+        while(count--)
+        {
+            hcpprt_loop();
+        }
         vTaskDelay(1);
     }
 }
@@ -44,6 +59,9 @@ void  main_init(const hruntime_function_t *func)
             fclose(f);
         }
     }
+
+    //关闭hruntime中的喂狗，准备由空闲任务喂狗
+    hruntime_loop_enable_softwatchdog(false);
 }
 HRUNTIME_INIT_EXPORT(main,255,main_init,NULL);
 HRUNTIME_SYMBOL_EXPORT(main_init);
