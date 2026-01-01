@@ -2,6 +2,7 @@
 #include <string.h>
 #include "esp_system.h"
 #include "esp_log.h"
+#include "esp_task.h"
 #include "hbox.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -18,7 +19,7 @@ void vApplicationIdleHook( void )
     }
 }
 
-void app_main(void)
+static void hruntime_task( void * pvParameters)
 {
     hcpprt_init();
     while(true)
@@ -29,6 +30,14 @@ void app_main(void)
             hcpprt_loop();
         }
         vTaskDelay(1);
+    }
+}
+
+void app_main(void)
+{
+    if(xTaskCreate(hruntime_task,"hruntime",ESP_TASK_MAIN_STACK,NULL,ESP_TASK_MAIN_PRIO,NULL)!=pdPASS)
+    {
+        ESP_LOGI(TAG,"start hruntime failed!");
     }
 }
 
