@@ -16,7 +16,7 @@
 
 默认情况下，采用[esp-idf](https://github.com/espressif/esp-idf.git).
 
-进入固件目录之前，需要先进入esp-idf 环境。
+进入固件目录之前，需要先进入esp-idf 环境。编译固件的主要步骤如下:
 
 - 进入[esp-idf](3rdparty/esp-idf)目录,若目录为空则表示源代码未下载完成。
 - 安装工具(执行install脚本)。
@@ -24,6 +24,10 @@
 - 检查`idf.py`是否可执行，若无法执行则检查上述步骤是否成功。
 - 进入固件目录（根据实际需要选择对应的目录）
 - 使用`idf.py build` 构建固件，使用`idf.py flash`烧录固件，使用`idf.py monitor`观察固件日志输出。
+
+## 脚本
+
+- [esp-idf-env.sh](esp-idf-env.sh)：用于在Linux环境（尤其是Ubuntu环境）快速进入esp-idf环境，该脚本执行完成后可直接进入固件目录操作。
 
 # 目录说明
 
