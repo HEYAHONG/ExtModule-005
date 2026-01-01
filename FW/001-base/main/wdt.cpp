@@ -25,7 +25,7 @@ static void hw_feed()
 static void  watchdog_init(const hruntime_function_t *func)
 {
     ESP_LOGI(TAG,"init!");
-	//设置好看门狗
+    //设置好看门狗
     hwatchdog_set_hardware_dog_feed(hw_feed);
     hwatchdog_setup_software_dog(sys_reset,hdefaults_tick_get);
 }

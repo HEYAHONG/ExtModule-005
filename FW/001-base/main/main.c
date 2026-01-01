@@ -23,6 +23,27 @@ void app_main(void)
 void  main_init(const hruntime_function_t *func)
 {
     ESP_LOGI(TAG,"app main enter!");
+    {
+        FILE* f = fopen("/var/banner", "r");
+        if (f != NULL)
+        {
+            fseek(f,0,SEEK_END);
+            long file_size=ftell(f);
+            if(file_size > 0)
+            {
+                fseek(f,0,SEEK_SET);
+                char * buff=(char *)malloc(file_size+1);
+                memset(buff,0,file_size+1);
+                if(buff !=NULL)
+                {
+                    fread(buff,1,file_size,f);
+                    ESP_LOGI(TAG,"\r\n%s",buff);
+                    free(buff);
+                }
+            }
+            fclose(f);
+        }
+    }
 }
 HRUNTIME_INIT_EXPORT(main,255,main_init,NULL);
 HRUNTIME_SYMBOL_EXPORT(main_init);
