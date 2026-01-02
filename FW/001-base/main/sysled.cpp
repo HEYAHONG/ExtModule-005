@@ -98,14 +98,14 @@ static void sysled_init(void)
 }
 
 
-void  hsysled_init(const hruntime_function_t *func)
+static void  hsysled_init(const hruntime_function_t *func)
 {
     sysled_init();
-    ESP_LOGI(TAG,"sysled init ok!\r\n");
+    ESP_LOGI(TAG,"sysled init ok!");
 }
 HRUNTIME_INIT_EXPORT(sysled,0,hsysled_init,NULL);
 
-void  hsysled_loop(const hruntime_function_t *func)
+static void  hsysled_loop(const hruntime_function_t *func)
 {
     sysled_slot(NULL,NULL);
 }
