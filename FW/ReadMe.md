@@ -28,6 +28,7 @@
 ## 脚本
 
 - [esp-idf-env.sh](esp-idf-env.sh)：用于在Linux环境（尤其是Ubuntu环境）快速进入esp-idf环境，该脚本执行完成后可直接进入固件目录操作。
+- [esp-idf-env.bat](esp-idf-env.bat)：用于在Windows环境（需要配置好python3环境）快速进入esp-idf环境，该脚本执行完成后可直接进入固件目录操作。注意:Windows下必须将第三方源代码下载完成，否则脚本将不能正常工作。
 
 # 目录说明
 
