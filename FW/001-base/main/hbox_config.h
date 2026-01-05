@@ -24,4 +24,19 @@
 #define HRUNTIME_USING_SYMBOL_SECTION 1
 
 
+/*
+ * 启用hdefaults的libc包装优化
+ */
+#define HDEFAULTS_LIBC_OPTIMIZE_LEVEL 1
+
+/*
+ * 启用hputchar
+ */
+#define HPUTCHAR console_putchar
+
+/*
+ * 启用hgetchar
+ */
+#define HGETCHAR console_getchar
+
 #endif  // __HBOX_CONFIG_H__

@@ -8,6 +8,29 @@
 #include "freertos/task.h"
 static const char *TAG = "esp32 main";
 
+/*
+ * 全局环境变量
+ */
+static char *global_environ[]=
+{
+    /*
+     * 语言设置
+     */
+    (char *)"LANG=zh_CN.UTF-8",
+    /*
+     * 时区设置(调用tzset生效,设置完成后，C库的相关时间函数的时区即生效)
+     */
+    (char *)"TZ=CST-8:00:00",
+    NULL
+};
+
+/*
+ * 设定环境变量指针
+ */
+char **environ=global_environ;
+
+
+
 void vApplicationIdleHook( void )
 {
     /*
