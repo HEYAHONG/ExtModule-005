@@ -30,6 +30,21 @@
 - [esp-idf-env.sh](esp-idf-env.sh)：用于在Linux环境（尤其是Ubuntu环境）快速进入esp-idf环境，该脚本执行完成后可直接进入固件目录操作。
 - [esp-idf-env.bat](esp-idf-env.bat)：用于在Windows环境（需要配置好python3环境）快速进入esp-idf环境，该脚本执行完成后可直接进入固件目录操作。注意:Windows下必须将第三方源代码下载完成，否则脚本将不能正常工作。
 
+# C/C++源代码编辑
+
+esp-idf采用CMake作为构建系统，因此可以使用任何支持CMake工程的IDE/编辑器，但需要注意的是，需要先进入esp-idf环境再使用命令启动IDE/编辑器（如vscode等），否则某些工具可能找不到导致无法正常生成工程文件。
+
+## codeblocks
+
+本人常用codeblocks作为C/C++ IDE。
+
+使用codeblocks编辑源代码的步骤如下：
+
+- 进入esp-idf环境并进入固件目录。
+- 创建`build/codeblocks`文件夹。
+- 使用`cmake -G "CodeBlocks - Ninja" ../../`生成codeblocks工程文件。
+- 使用codeblocks打开*.cbp工程文件(最好在esp-idf环境使用命令启动codeblocks)。
+
 # 目录说明
 
 - [数字]-[名称]：数字为固件编号，名称为固件名称。
