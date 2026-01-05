@@ -41,7 +41,7 @@ esp-idf采用CMake作为构建系统，因此可以使用任何支持CMake工程
 使用codeblocks编辑源代码的步骤如下：
 
 - 进入esp-idf环境并进入固件目录。
-- 创建`build/codeblocks`文件夹。
+- 创建`build/codeblocks`文件夹并进入。
 - 使用`cmake -G "CodeBlocks - Ninja" ../../`生成codeblocks工程文件。
 - 使用codeblocks打开*.cbp工程文件(最好在esp-idf环境使用命令启动codeblocks)。
 
