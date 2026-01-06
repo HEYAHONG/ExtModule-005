@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "esp_task.h"
 #include "esp_ota_ops.h"
+#include "esp_partition.h"
 #include "hbox.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -120,3 +121,85 @@ void  main_loop(const hruntime_function_t *func)
 }
 HRUNTIME_LOOP_EXPORT(main,255,main_loop,NULL);
 HRUNTIME_SYMBOL_EXPORT(main_loop);
+
+static int cmd_ota_entry(int argc,const char *argv[])
+{
+    hshell_context_t * hshell_ctx=hshell_context_get_from_main_argv(argc,argv);
+    if(argc<=1)
+    {
+        hshell_printf(hshell_ctx,"%s\t[command]:\r\n",argv[0]!=NULL?argv[0]:"ota");
+        hshell_printf(hshell_ctx,"\tfactory\t\tdownload factory app to OTA partition\r\n");
+    }
+    else
+    {
+        if(argv[1]!=NULL && strcmp(argv[1],"factory")==0)
+        {
+            /*
+             * 将factory分区下载至下一个OTA分区，覆盖掉原有分区内容
+             */
+            const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
+            if(update_partition==NULL)
+            {
+                hshell_printf(hshell_ctx,"OTA partition is not found!\r\n");
+                return -1;
+            }
+            const esp_partition_t *factory_partition=NULL;
+            {
+                esp_partition_iterator_t it=esp_partition_find(ESP_PARTITION_TYPE_APP,ESP_PARTITION_SUBTYPE_APP_FACTORY,NULL);
+                if(it!=NULL)
+                {
+                    factory_partition=esp_partition_get(it);
+                    esp_partition_iterator_release(it);
+                }
+            }
+            if(factory_partition==NULL)
+            {
+                hshell_printf(hshell_ctx,"factory partition is not found!\r\n");
+                return-1;
+            }
+            esp_ota_handle_t update_handle = 0;
+            if(ESP_OK!=esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle))
+            {
+                hshell_printf(hshell_ctx,"esp_ota_begin error!\r\n");
+                return -1;
+            }
+            {
+                /*
+                 * 复制数据
+                 */
+                const void *partition_bin = NULL;
+                esp_partition_mmap_handle_t data_map=0;
+                if(ESP_OK!=(esp_partition_mmap(factory_partition, 0, factory_partition->size, ESP_PARTITION_MMAP_DATA, &partition_bin, &data_map)))
+                {
+
+                    esp_ota_abort(update_handle);
+                    hshell_printf(hshell_ctx,"esp_partition_mmap error!\r\n");
+                    return -1;
+                }
+                if(ESP_OK!=(esp_ota_write(update_handle, (const void *)partition_bin, factory_partition->size)))
+                {
+                    esp_partition_munmap(data_map);
+                    esp_ota_abort(update_handle);
+                    hshell_printf(hshell_ctx,"esp_ota_write error!\r\n");
+                    return -1;
+                }
+                esp_partition_munmap(data_map);
+            }
+            if(ESP_OK!=(esp_ota_end(update_handle)))
+            {
+                hshell_printf(hshell_ctx,"esp_ota_end error!\r\n");
+                return -1;
+            }
+            if(ESP_OK!=(esp_ota_set_boot_partition(update_partition)))
+            {
+                hshell_printf(hshell_ctx,"esp_ota_set_boot_partition error!\r\n");
+                return -1;
+            }
+            hshell_printf(hshell_ctx,"done! now you can reboot!\r\n");
+        }
+    }
+    return 0;
+};
+HSHELL_COMMAND_EXPORT(ota,cmd_ota_entry,ota command);
+
+
