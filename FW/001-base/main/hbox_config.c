@@ -2,6 +2,7 @@
 #include "hbox.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "esp_system.h"
 
 hdefaults_tick_t hbox_tick_get (void)
@@ -9,16 +10,27 @@ hdefaults_tick_t hbox_tick_get (void)
     return  xTaskGetTickCount()*(1000/configTICK_RATE_HZ);
 }
 
-static portMUX_TYPE g_hbox_critical=portMUX_INITIALIZER_UNLOCKED;
+static SemaphoreHandle_t GlobalLockHandle=NULL;
+static StaticSemaphore_t GlobalLockBuffer;
 
 void hbox_enter_critical()
 {
-    taskENTER_CRITICAL(&g_hbox_critical);
+    if(GlobalLockHandle==NULL)
+    {
+        GlobalLockHandle=xSemaphoreCreateRecursiveMutexStatic( &GlobalLockBuffer );
+    }
+    if(GlobalLockHandle!=NULL)
+    {
+        xSemaphoreTakeRecursive(GlobalLockHandle,portMAX_DELAY);
+    }
 }
 
 void hbox_exit_critical()
 {
-    taskEXIT_CRITICAL(&g_hbox_critical);
+    if(GlobalLockHandle!=NULL)
+    {
+        xSemaphoreGiveRecursive(GlobalLockHandle);
+    }
 }
 
 

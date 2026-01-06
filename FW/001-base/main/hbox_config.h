@@ -39,4 +39,11 @@
  */
 #define HGETCHAR console_getchar
 
+/*
+ * 配置hshell
+ */
+#define HSHELL_CONTEXT_BUFFER_SIZE  384
+#define HSHELL_MAX_ARGC             8
+#define HSHELL_MAX_HISTORY_COUNT    2
+
 #endif  // __HBOX_CONFIG_H__
