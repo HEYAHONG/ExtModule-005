@@ -200,7 +200,7 @@ static int cmd_ota_entry(int argc,const char *argv[])
         }
         else if(argv[1]!=NULL && strcmp(argv[1],"boot")==0)
         {
-            if(argv[2]==NULL && argc <=2)
+            if(argv[2]==NULL || argc <=2)
             {
                 /*
                  * 显示帮助信息
