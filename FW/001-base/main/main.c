@@ -220,6 +220,7 @@ static int cmd_ota_entry(int argc,const char *argv[])
                     }
                     hshell_printf(hshell_ctx,"%d\t%s\r\n",((int)t-ESP_PARTITION_SUBTYPE_APP_OTA_0),p->label);
                 }
+                return 0;
             }
             int n=atoi(argv[2]);
             const esp_partition_t *next_partition=NULL;
