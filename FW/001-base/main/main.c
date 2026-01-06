@@ -99,6 +99,11 @@ void  main_init(const hruntime_function_t *func)
     {
         ESP_LOGI(TAG,"running partition=%s",running_partition->label);
     }
+    esp_app_desc_t running_app_desc;
+    if(esp_ota_get_partition_description(running_partition,&running_app_desc)==ESP_OK)
+    {
+        ESP_LOGI(TAG,"running app=%s",running_app_desc.project_name);
+    }
 
     //关闭hruntime中的喂狗，准备由空闲任务喂狗
     hruntime_loop_enable_softwatchdog(false);
