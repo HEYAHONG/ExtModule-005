@@ -129,6 +129,7 @@ static int cmd_ota_entry(int argc,const char *argv[])
     {
         hshell_printf(hshell_ctx,"%s\t[command]:\r\n",argv[0]!=NULL?argv[0]:"ota");
         hshell_printf(hshell_ctx,"\tfactory\t\tdownload factory app to OTA partition\r\n");
+        hshell_printf(hshell_ctx,"\tboot\t\tset boot partition.boot [n]\r\n");
     }
     else
     {
@@ -191,6 +192,63 @@ static int cmd_ota_entry(int argc,const char *argv[])
                 return -1;
             }
             if(ESP_OK!=(esp_ota_set_boot_partition(update_partition)))
+            {
+                hshell_printf(hshell_ctx,"esp_ota_set_boot_partition error!\r\n");
+                return -1;
+            }
+            hshell_printf(hshell_ctx,"done! now you can reboot!\r\n");
+        }
+        else if(argv[1]!=NULL && strcmp(argv[1],"boot")==0)
+        {
+            if(argv[2]==NULL && argc <=2)
+            {
+                /*
+                 * 显示帮助信息
+                 */
+                hshell_printf(hshell_ctx,"boot\t\tset boot partition.boot [n]\r\n");
+                hshell_printf(hshell_ctx,"----------\r\n");
+                if(NULL!=esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL))
+                {
+                    hshell_printf(hshell_ctx,"-1\tfactory\r\n");
+                }
+                for (esp_partition_subtype_t t = ESP_PARTITION_SUBTYPE_APP_OTA_0; t != ESP_PARTITION_SUBTYPE_APP_OTA_MAX; t++)
+                {
+                    const esp_partition_t *p = esp_partition_find_first(ESP_PARTITION_TYPE_APP, t, NULL);
+                    if (p == NULL)
+                    {
+                        continue;
+                    }
+                    hshell_printf(hshell_ctx,"%d\t%s\r\n",((int)t-ESP_PARTITION_SUBTYPE_APP_OTA_0),p->label);
+                }
+            }
+            int n=atoi(argv[2]);
+            const esp_partition_t *next_partition=NULL;
+            if(n==-1)
+            {
+                next_partition=esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL);
+            }
+            else if(n >= 0)
+            {
+                esp_partition_subtype_t t =  ESP_PARTITION_SUBTYPE_APP_OTA_0+n;
+                if(t < ESP_PARTITION_SUBTYPE_APP_OTA_MAX)
+                {
+                    next_partition=esp_partition_find_first(ESP_PARTITION_TYPE_APP, t, NULL);
+                }
+            }
+            if(next_partition==NULL)
+            {
+                hshell_printf(hshell_ctx,"partition is not found!");
+                return -1;
+            }
+            hshell_printf(hshell_ctx,"partition=%s\r\n",next_partition->label);
+            esp_app_desc_t app_desc;
+            if(esp_ota_get_partition_description(next_partition,&app_desc)!=ESP_OK)
+            {
+                hshell_printf(hshell_ctx,"esp_ota_get_partition_description error!\r\n");
+                return -1;
+            }
+            hshell_printf(hshell_ctx,"app=%s\r\n",app_desc.project_name);
+            if(ESP_OK!=(esp_ota_set_boot_partition(next_partition)))
             {
                 hshell_printf(hshell_ctx,"esp_ota_set_boot_partition error!\r\n");
                 return -1;
