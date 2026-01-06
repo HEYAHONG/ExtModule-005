@@ -1,6 +1,7 @@
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "esp_log.h"
+#include "esp_task.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "hbox.h"
@@ -88,6 +89,17 @@ int HGETCHAR(void)
 
 HRUNTIME_INIT_EXPORT(console,0xFFFF,hconsole_init,NULL);
 
+static void hshell_task( void * pvParameters)
+{
+    while(true)
+    {
+        while(hshell_loop(NULL)==0);
+        vTaskDelay(1);
+    }
+}
+
+static TaskHandle_t hshell_task_handle=NULL;
+
 static void  hconsole_loop(const hruntime_function_t *func)
 {
     if(hdefaults_tick_get() > 3000)
@@ -95,7 +107,10 @@ static void  hconsole_loop(const hruntime_function_t *func)
         /*
          * 启动时间大于一定时间后运行
          */
-        while(hshell_loop(NULL)==0);
+        if(hshell_task_handle==NULL)
+        {
+            xTaskCreate(hshell_task,"hshell",ESP_TASK_MAIN_STACK,NULL,ESP_TASK_MAIN_PRIO,&hshell_task_handle);
+        }
     }
 }
 HRUNTIME_LOOP_EXPORT(console,0xFFFF,hconsole_loop,NULL);
