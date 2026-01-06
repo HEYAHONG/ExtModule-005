@@ -3,6 +3,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_task.h"
+#include "esp_ota_ops.h"
 #include "hbox.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -90,6 +91,13 @@ void  main_init(const hruntime_function_t *func)
             }
             fclose(f);
         }
+    }
+
+    ESP_LOGI(TAG,"ota partition count=%d",(int)esp_ota_get_app_partition_count());
+    const esp_partition_t* running_partition=esp_ota_get_running_partition();
+    if(running_partition!=NULL)
+    {
+        ESP_LOGI(TAG,"running partition=%s",running_partition->label);
     }
 
     //关闭hruntime中的喂狗，准备由空闲任务喂狗
