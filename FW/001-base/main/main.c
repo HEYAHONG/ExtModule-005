@@ -60,6 +60,24 @@ static void hruntime_task( void * pvParameters)
 
 void app_main(void)
 {
+
+    /*
+     * esp_libc组件重新设定environ环境变量，需要将其复原。
+     * 可通过hgetenv获取环境变量的项目
+     */
+    environ=global_environ;
+
+
+
+    /*
+     * 设定时区
+     * 对于newlib而言，时区可通过environ环境变量设置，调用tzset生效
+     */
+    tzset();
+
+    /*
+     * 启动hruntime
+     */
     if(xTaskCreate(hruntime_task,"hruntime",ESP_TASK_MAIN_STACK,NULL,ESP_TASK_MAIN_PRIO,NULL)!=pdPASS)
     {
         ESP_LOGI(TAG,"start hruntime failed!");
