@@ -8,7 +8,15 @@
  **************************************************************/
 #include "hdefaults_syscall.h"
 
+/*
+ * hsyscall
+ */
+#include "hsyscall/time/hsyscall_time.c"
+#include "hsyscall/random/hsyscall_random.c"
 
+/*
+ * 包装
+ */
 #include "wrapper/hgettimeofday.c"
 #include "wrapper/hsettimeofday.c"
 #include "wrapper/hgetrandom.c"
@@ -188,5 +196,35 @@ hdefaults_syscall_function_t hdefaults_syscall_function_find(uintptr_t number)
     return ret;
 }
 
+void hdefaults_syscall_init(void)
+{
 
+#if !defined(HDEFAULTS_SYSCALL_NO_IMPLEMENTATION) && !defined(HDEFAULTS_SYSCALL_NO_HGETRANDOM) && !defined(HGETRANDOM)
+    {
+        //使用当前时间作为随机数种子
+        hgettimeofday_timeval_t tv= {0};
+        hgettimeofday(&tv,NULL);
+        {
+            hrng_linearcongruential_rand48_srand(tv.tv_sec*1000000+tv.tv_usec);
+        }
+    }
+#endif
+
+}
+
+void hdefaults_syscall_loop(void)
+{
+
+#if !defined(HDEFAULTS_SYSCALL_NO_IMPLEMENTATION) && !defined(HDEFAULTS_SYSCALL_NO_HGETTIMEOFDAY) && !defined(HGETTIMEOFDAY)
+    /*
+     * 调用一次hgettimeofday更新内部时间
+     */
+    {
+        hgettimeofday_timeval_t tv;
+        hgettimeofday_timezone_t tz;
+        hgettimeofday(&tv,&tz);
+    }
+#endif
+
+}
 

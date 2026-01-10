@@ -1,21 +1,12 @@
 /***************************************************************
- * Name:      h3rdparty.c
- * Purpose:   引入第三方源代码文件
+ * Name:      hrng.c
+ * Purpose:   实现hrng接口
  * Author:    HYH (hyhsystem.cn)
- * Created:   2024-09-27
+ * Created:   2026-01-09
  * Copyright: HYH (hyhsystem.cn)
  * License:   MIT
  **************************************************************/
-#include "h3rdparty.h"
-#include "hdefaults.h"
+#include "hrng.h"
 
-void h3rdparty_init(void)
-{
-
-}
-
-void h3rdparty_loop(void)
-{
-
-}
-
+#include "hrng/hrng_linearcongruential.c"
+#include "hrng/hrng_chacha20.c"
