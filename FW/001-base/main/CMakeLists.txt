@@ -1,7 +1,7 @@
 
 file(GLOB MAIN_C_CXX_LD_FILES *.h *.cpp *.c  *.hpp)
 idf_component_register(SRCS ${MAIN_C_CXX_LD_FILES}
-                       PRIV_REQUIRES fatfs spiffs esp_driver_uart esp_driver_gpio app_update
+                       PRIV_REQUIRES fatfs spiffs esp_driver_uart esp_driver_gpio app_update nvs_flash
                        INCLUDE_DIRS "."
                        WHOLE_ARCHIVE TRUE)
 
