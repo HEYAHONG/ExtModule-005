@@ -1,3 +1,6 @@
 [submodule "FW/3rdparty/esp-idf"]
 	path = FW/3rdparty/esp-idf
 	url = https://github.com/espressif/esp-idf.git
+[submodule "SOFT/BLE/SimpleBLE"]
+	path = SOFT/BLE/SimpleBLE
+	url = ../../HEYAHONG/SimpleBLE.git

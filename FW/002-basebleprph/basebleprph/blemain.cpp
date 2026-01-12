@@ -205,6 +205,14 @@ static void blemain_host_task(void *param)
     nimble_port_freertos_deinit();
 }
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+        extern  void ble_store_config_init(void);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 static void  hblemain_init(const hruntime_function_t *func)
 {
@@ -230,16 +238,23 @@ static void  hblemain_init(const hruntime_function_t *func)
      * 设定设备名称服务
      */
     ble_svc_gap_device_name_set("EM005PRPH");
-    /*
-     * 初始化任务
-     */
-    nimble_port_freertos_init(blemain_host_task);
+
+    ble_store_config_init();
+
 }
 HRUNTIME_INIT_EXPORT(blemain,0,hblemain_init,NULL);
 
 static void  hblemain_loop(const hruntime_function_t *func)
 {
-
+    static bool is_nimble_task_start=false;
+    if(!is_nimble_task_start)
+    {
+        is_nimble_task_start=true;
+        /*
+         * 初始化任务
+         */
+        nimble_port_freertos_init(blemain_host_task);
+    }
 }
 HRUNTIME_LOOP_EXPORT(blemain,0,hblemain_loop,NULL);
 
