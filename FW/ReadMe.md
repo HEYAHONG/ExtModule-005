@@ -53,4 +53,5 @@ esp-idf采用CMake作为构建系统，因此可以使用任何支持CMake工程
 # 固件列表
 
 - [001-base](001-base):基础模板。
+- [002-basebleprph](002-basebleprph):基础BLE外设模板
 

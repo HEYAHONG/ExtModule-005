@@ -21,5 +21,3 @@ idf_component_get_property(esptool_elf2image_args esptool_py ESPTOOL_PY_ELF2IMAG
 list(APPEND esptool_elf2image_args   --use-segments)
 idf_component_set_property(esptool_py ESPTOOL_PY_ELF2IMAGE_ARGS "${esptool_elf2image_args}")
 
-#spiffs
-spiffs_create_partition_image(storage ../spiffs_image FLASH_IN_PROJECT)
