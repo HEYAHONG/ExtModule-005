@@ -22,6 +22,10 @@ HShellService的客户端。
 
 # 截图
 
+## Windows
+
+![HShellServiceClient_Windows](HShellServiceClient_Windows.png)
+
 ## Linux
 
 ![HShellServiceClient_Linux](HShellServiceClient_Linux.png)
