@@ -132,10 +132,6 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base,int32_t eve
     case ETHERNET_EVENT_CONNECTED:
         esp_eth_ioctl(eth_handle, ETH_CMD_G_MAC_ADDR, mac_addr);
         /*
-         * 创建ipv6的linklocal地址,允许直接使用ipv6通信
-         */
-        esp_netif_create_ip6_linklocal(eth_netif);
-        /*
          * 等待sntp
          */
         esp_netif_sntp_start();
@@ -201,7 +197,7 @@ static void heth_init(const hruntime_function * arg)
             "3.pool.ntp.org",
         };
         esp_sntp_config_t sntp_config=ESP_NETIF_SNTP_DEFAULT_CONFIG(sntp_server_name[0]);
-        for(size_t i=0; ((i < sizeof(sntp_server_name)/sizeof(sntp_server_name[0])) && (i < CONFIG_LWIP_SNTP_MAX_SERVERS));i++)
+        for(size_t i=0; ((i < sizeof(sntp_server_name)/sizeof(sntp_server_name[0])) && (i < CONFIG_LWIP_SNTP_MAX_SERVERS)); i++)
         {
             sntp_config.servers[i]=sntp_server_name[i];
             sntp_config.num_of_servers=i+1;
@@ -211,10 +207,10 @@ static void heth_init(const hruntime_function * arg)
         {
             if(tv!=NULL)
             {
-                 hsettimeofday_timeval_t new_tv;
-                 new_tv.tv_sec=tv->tv_sec;
-                 new_tv.tv_usec=tv->tv_usec;
-                 hsettimeofday(&new_tv,NULL);
+                hsettimeofday_timeval_t new_tv;
+                new_tv.tv_sec=tv->tv_sec;
+                new_tv.tv_usec=tv->tv_usec;
+                hsettimeofday(&new_tv,NULL);
             }
         };
 
@@ -241,6 +237,15 @@ static void heth_init(const hruntime_function * arg)
     // Start Ethernet driver state machine
     ESP_ERROR_CHECK(esp_eth_start(eth_handle));
 
+    /*
+     * 等待以太网初始化
+     */
+    vTaskDelay(100);
+
+    /*
+     * 创建ipv6的linklocal地址,允许直接使用ipv6通信
+     */
+    esp_netif_create_ip6_linklocal(eth_netif);
 }
 
 HRUNTIME_INIT_EXPORT(eth,0,heth_init,NULL);

@@ -109,10 +109,20 @@ static void  hconsole_loop(const hruntime_function_t *func)
          */
         if(hshell_task_handle==NULL)
         {
-            xTaskCreate(hshell_task,"hshell",ESP_TASK_MAIN_STACK,NULL,ESP_TASK_MAIN_PRIO,&hshell_task_handle);
+            xTaskCreate(hshell_task,"hshell",ESP_TASK_MAIN_STACK+4096,NULL,ESP_TASK_MAIN_PRIO,&hshell_task_handle);
         }
     }
 }
 HRUNTIME_LOOP_EXPORT(console,0xFFFF,hconsole_loop,NULL);
 
 
+static int cmd_ps_entry(int argc,const char *argv[])
+{
+    hshell_context_t * hshell_ctx=hshell_context_get_from_main_argv(argc,argv);
+    char strbuff[4096];
+    strbuff[sizeof(strbuff)-1]='\0';
+    vTaskList(strbuff);
+    hshell_printf(hshell_ctx,"%s\r\n",strbuff);
+    return 0;
+};
+HSHELL_COMMAND_EXPORT(ps,cmd_ps_entry,show process info);
