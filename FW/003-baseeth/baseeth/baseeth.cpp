@@ -4,6 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_netif.h"
+#include "esp_netif_sntp.h"
 #include "esp_eth.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -134,6 +135,11 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base,int32_t eve
          * 创建ipv6的linklocal地址,允许直接使用ipv6通信
          */
         esp_netif_create_ip6_linklocal(eth_netif);
+        /*
+         * 等待sntp
+         */
+        esp_netif_sntp_start();
+        esp_netif_sntp_sync_wait(20);
         ESP_LOGI(TAG, "Ethernet Link Up");
         ESP_LOGI(TAG, "Ethernet HW Addr %02x:%02x:%02x:%02x:%02x:%02x",
                  mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
@@ -176,6 +182,48 @@ static void heth_init(const hruntime_function * arg)
     ESP_ERROR_CHECK(esp_netif_init());
     // Create default event loop that running in background
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    {
+        /*
+         * 设置ntp
+         */
+        const char *sntp_server_name[]=
+        {
+            "ntp.ntsc.ac.cn",
+            "ntp.hyhsystem.cn",
+            "0.cn.pool.ntp.org",
+            "0.pool.ntp.org",
+            "1.cn.pool.ntp.org",
+            "1.pool.ntp.org",
+            "2.cn.pool.ntp.org",
+            "2.pool.ntp.org",
+            "3.cn.pool.ntp.org",
+            "3.pool.ntp.org",
+        };
+        esp_sntp_config_t sntp_config=ESP_NETIF_SNTP_DEFAULT_CONFIG(sntp_server_name[0]);
+        for(size_t i=0; ((i < sizeof(sntp_server_name)/sizeof(sntp_server_name[0])) && (i < CONFIG_LWIP_SNTP_MAX_SERVERS));i++)
+        {
+            sntp_config.servers[i]=sntp_server_name[i];
+            sntp_config.num_of_servers=i+1;
+        }
+
+        sntp_config.sync_cb=[](struct timeval *tv)
+        {
+            if(tv!=NULL)
+            {
+                 hsettimeofday_timeval_t new_tv;
+                 new_tv.tv_sec=tv->tv_sec;
+                 new_tv.tv_usec=tv->tv_usec;
+                 hsettimeofday(&new_tv,NULL);
+            }
+        };
+
+        esp_netif_sntp_init(&sntp_config);
+        /*
+         * 启动sntp
+         */
+        esp_netif_sntp_start();
+    }
 
     // Create instance of esp-netif for Ethernet
     // Use ESP_NETIF_DEFAULT_ETH when just one Ethernet interface is used and you don't need to modify
