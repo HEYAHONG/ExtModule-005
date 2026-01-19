@@ -205,7 +205,11 @@ void hdefaults_syscall_init(void)
         hgettimeofday_timeval_t tv= {0};
         hgettimeofday(&tv,NULL);
         {
+#if defined(HSYSCALL_GETRANDOM_USING_MT)
+            hrng_mt_srand(NULL,tv.tv_sec*1000000+tv.tv_usec);
+#else
             hrng_linearcongruential_rand48_srand(tv.tv_sec*1000000+tv.tv_usec);
+#endif
         }
     }
 #endif
@@ -215,7 +219,7 @@ void hdefaults_syscall_init(void)
 void hdefaults_syscall_loop(void)
 {
 
-#if !defined(HDEFAULTS_SYSCALL_NO_IMPLEMENTATION) && !defined(HDEFAULTS_SYSCALL_NO_HGETTIMEOFDAY) && !defined(HGETTIMEOFDAY)
+#if !defined(HDEFAULTS_SYSCALL_NO_IMPLEMENTATION) && !defined(HDEFAULTS_SYSCALL_NO_HGETTIMEOFDAY) && !defined(HGETTIMEOFDAY) && !defined(HSYSCALL_GETTIMEOFDAY_UPDATE)
     /*
      * 调用一次hgettimeofday更新内部时间
      */

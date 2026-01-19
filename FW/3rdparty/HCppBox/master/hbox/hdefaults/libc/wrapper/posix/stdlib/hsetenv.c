@@ -8,8 +8,6 @@
  **************************************************************/
 #include "hsetenv.h"
 #include "hdefaults.h"
-#include "stdlib.h"
-#include "../hgetenv.h"
 
 
 #ifdef HSETENV
@@ -25,7 +23,7 @@ int hsetenv(const char *envname, const char *envval, int overwrite)
 #elif defined(HDEFAULTS_OS_WINDOWS)
     {
         const char *old_envval=hgetenv(envname);
-        if(old_envval==NULL || old_envval[0]=='\0')
+        if(old_envval!=NULL && old_envval[0]!='\0')
         {
             if(overwrite==0)
             {
@@ -43,7 +41,7 @@ int hsetenv(const char *envname, const char *envval, int overwrite)
 #else
     {
         const char *old_envval=hgetenv(envname);
-        if(old_envval==NULL || old_envval[0]=='\0')
+        if(old_envval!=NULL && old_envval[0]!='\0')
         {
             if(overwrite==0)
             {
@@ -53,6 +51,7 @@ int hsetenv(const char *envname, const char *envval, int overwrite)
                 return 0;
             }
         }
+        return hlibc_env_setenv(envname,envval,overwrite);
     }
 #endif
     return -1;

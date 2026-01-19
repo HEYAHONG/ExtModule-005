@@ -15,34 +15,74 @@
 #define HDEFAULTS_LIBC_OPTIMIZE_LEVEL     0
 #endif // HDEFAULTS_LIBC_OPTIMIZE_LEVEL
 
+/*
+ * hlibc
+ */
+#include "hlibc/env/hlibc_env.c"
 
-#include "wrapper/hputchar.c"
-#include "wrapper/hgetchar.c"
-#include "wrapper/hgetenv.c"
-#include "wrapper/hmalloc.c"
-#include "wrapper/hfree.c"
-#include "wrapper/hcalloc.c"
-#include "wrapper/hrealloc.c"
-#include "wrapper/habort.c"
-#include "wrapper/hexit.c"
-#include "wrapper/hfputs.c"
-#include "wrapper/hvfprintf.c"
-#include "wrapper/hfprintf.c"
-#include "wrapper/hputs.c"
-#include "wrapper/hferror.c"
-#include "wrapper/hfread.c"
-#include "wrapper/hfwrite.c"
-#include "wrapper/htime.c"
-#include "wrapper/hclock.c"
-#include "wrapper/hstrcmp.c"
-#include "wrapper/hstrncmp.c"
-#include "wrapper/hstrlen.c"
-#include "wrapper/hmemset.c"
+/*
+ * libc包装
+ */
+
+/*
+ * stdio
+ */
+#include "wrapper/stdio/hputchar.c"
+#include "wrapper/stdio/hgetchar.c"
+#include "wrapper/stdio/hfputs.c"
+#include "wrapper/stdio/hvfprintf.c"
+#include "wrapper/stdio/hfprintf.c"
+#include "wrapper/stdio/hputs.c"
+#include "wrapper/stdio/hferror.c"
+#include "wrapper/stdio/hfread.c"
+#include "wrapper/stdio/hfwrite.c"
+
+/*
+ * stdlib
+ */
+#include "wrapper/stdlib/hgetenv.c"
+#include "wrapper/stdlib/hmalloc.c"
+#include "wrapper/stdlib/hfree.c"
+#include "wrapper/stdlib/hcalloc.c"
+#include "wrapper/stdlib/hrealloc.c"
+#include "wrapper/stdlib/habort.c"
+#include "wrapper/stdlib/hexit.c"
+
+/*
+ * time
+ */
+#include "wrapper/time/htime.c"
+#include "wrapper/time/hclock.c"
+
+/*
+ * string
+ */
+#include "wrapper/string/hstrcmp.c"
+#include "wrapper/string/hstrncmp.c"
+#include "wrapper/string/hstrlen.c"
+#include "wrapper/string/hmemset.c"
 
 
 /*
  * posix标准中的函数
  */
-#include "wrapper/posix/hsetenv.c"
-#include "wrapper/posix/hunsetenv.c"
+#include "wrapper/posix/stdlib/hsetenv.c"
+#include "wrapper/posix/stdlib/hunsetenv.c"
+
+
+void hdefaults_libc_port_init(void)
+{
+#ifndef HDEFAULTS_LIBC_TINY
+#if HDEFAULTS_LIBC_OPTIMIZE_LEVEL > 0
+    hlibc_env_init();
+#endif // HDEFAULTS_LIBC_OPTIMIZE_LEVEL
+#endif // HDEFAULTS_LIBC_TINY
+}
+
+void hdefaults_libc_port_loop(void)
+{
+#ifndef HDEFAULTS_LIBC_TINY
+
+#endif // HDEFAULTS_LIBC_TINY
+}
 
