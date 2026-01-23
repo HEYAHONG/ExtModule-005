@@ -38,7 +38,8 @@ int hsetenv(const char *envname, const char *envval, int overwrite)
             return 0;
         }
     }
-#else
+    return -1;
+#elif !defined(HLIBC_NO_IMPLEMENTATION) && !defined(HLIBC_NO_ENV)
     {
         const char *old_envval=hgetenv(envname);
         if(old_envval!=NULL && old_envval[0]!='\0')
@@ -53,8 +54,22 @@ int hsetenv(const char *envname, const char *envval, int overwrite)
         }
         return hlibc_env_setenv(envname,envval,overwrite);
     }
+#else
+    {
+        const char *old_envval=hgetenv(envname);
+        if(old_envval!=NULL && old_envval[0]!='\0')
+        {
+            if(overwrite==0)
+            {
+                /*
+                 * 不改变原有变量
+                 */
+                return 0;
+            }
+        }
+        return -1;
+    }
 #endif
-    return -1;
 }
 
 

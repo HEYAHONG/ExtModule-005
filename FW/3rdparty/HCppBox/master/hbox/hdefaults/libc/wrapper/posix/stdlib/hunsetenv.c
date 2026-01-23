@@ -36,7 +36,8 @@ int hunsetenv(const char *envname)
             return 0;
         }
     }
-#else
+    return -1;
+#elif !defined(HLIBC_NO_IMPLEMENTATION) && !defined(HLIBC_NO_ENV)
     {
         const char *old_envval=hgetenv(envname);
         if(old_envval==NULL || old_envval[0]=='\0')
@@ -48,8 +49,19 @@ int hunsetenv(const char *envname)
         }
         return hlibc_env_unsetenv(envname);
     }
+#else
+    {
+        const char *old_envval=hgetenv(envname);
+        if(old_envval==NULL || old_envval[0]=='\0')
+        {
+            /*
+             * 视为成功
+             */
+            return 0;
+        }
+        return -1;
+    }
 #endif
-    return -1;
 }
 
 
