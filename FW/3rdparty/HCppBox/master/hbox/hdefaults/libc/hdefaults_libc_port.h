@@ -60,6 +60,13 @@ extern "C"
 #include "wrapper/stdatomic/hatomic_flag.h"
 
 /*
+ * threads
+ */
+#include "wrapper/threads/hthreads_common.h"
+#include "wrapper/threads/hthrd.h"
+
+
+/*
  * posix标准中的函数
  */
 

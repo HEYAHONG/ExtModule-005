@@ -46,4 +46,13 @@
 #define HSHELL_MAX_ARGC             8
 #define HSHELL_MAX_HISTORY_COUNT    2
 
+/*
+ * 启用hthrd
+ */
+#define HTHRD_USING_FREERTOS        1
+#define HTHRD_FREERTOS_FREERTOS_HEADER "freertos/FreeRTOS.h"
+#define HTHRD_FREERTOS_TASK_HEADER     "freertos/task.h"
+#define HTHRD_FREERTOS_STACK_SIZE      (4096)
+
+
 #endif  // __HBOX_CONFIG_H__

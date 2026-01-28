@@ -80,7 +80,14 @@
 /*
  * stdatomic
  */
+#include "wrapper/stdatomic/hstdatomic_common.c"
 #include "wrapper/stdatomic/hatomic_flag.c"
+
+/*
+ * threads
+ */
+#include "wrapper/threads/hthreads_common.c"
+#include "wrapper/threads/hthrd.c"
 
 /*
  * posix标准中的函数

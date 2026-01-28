@@ -45,7 +45,7 @@ void vApplicationIdleHook( void )
     }
 }
 
-static void hruntime_task( void * pvParameters)
+static int hruntime_task( void * pvParameters)
 {
     hcpprt_init();
     while(true)
@@ -55,8 +55,14 @@ static void hruntime_task( void * pvParameters)
         {
             hcpprt_loop();
         }
-        vTaskDelay(1);
+        {
+            htimespec_t req={0};
+            req.tv_nsec=portTICK_PERIOD_MS*1000000;
+            hthrd_sleep(&req,NULL);
+        }
     }
+
+    return 0;
 }
 
 void app_main(void)
@@ -89,7 +95,7 @@ void app_main(void)
     /*
      * 启动hruntime
      */
-    if(xTaskCreate(hruntime_task,"hruntime",ESP_TASK_MAIN_STACK,NULL,ESP_TASK_MAIN_PRIO,NULL)!=pdPASS)
+    if(hthrd_success==hthrd_create(NULL,hruntime_task,NULL))
     {
         ESP_LOGI(TAG,"start hruntime failed!");
     }
