@@ -132,6 +132,10 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base,int32_t eve
     case ETHERNET_EVENT_CONNECTED:
         esp_eth_ioctl(eth_handle, ETH_CMD_G_MAC_ADDR, mac_addr);
         /*
+         * 创建ipv6的linklocal地址,允许直接使用ipv6通信
+         */
+        esp_netif_create_ip6_linklocal(eth_netif);
+        /*
          * 等待sntp
          */
         esp_netif_sntp_start();
@@ -237,15 +241,6 @@ static void heth_init(const hruntime_function * arg)
     // Start Ethernet driver state machine
     ESP_ERROR_CHECK(esp_eth_start(eth_handle));
 
-    /*
-     * 等待以太网初始化
-     */
-    vTaskDelay(100);
-
-    /*
-     * 创建ipv6的linklocal地址,允许直接使用ipv6通信
-     */
-    esp_netif_create_ip6_linklocal(eth_netif);
 }
 
 HRUNTIME_INIT_EXPORT(eth,0,heth_init,NULL);
