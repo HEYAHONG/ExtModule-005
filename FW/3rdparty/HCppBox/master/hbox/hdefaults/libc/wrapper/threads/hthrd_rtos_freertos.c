@@ -185,6 +185,7 @@ hthrd_t hthrd_freertos_current(void)
     return ret;
 }
 
+void hthrd_freertos_yield(void);
 
 int hthrd_freertos_sleep(const htimespec_t* duration,htimespec_t * remaining)
 {
@@ -195,6 +196,8 @@ int hthrd_freertos_sleep(const htimespec_t* duration,htimespec_t * remaining)
     {
         cur=(*duration);
     }
+
+    hthrd_freertos_yield();
 
     while(cur.tv_sec--)
     {
@@ -238,9 +241,10 @@ void hthrd_freertos_exit(int res)
     {
         return ;
     }
-    if((*(hthrd_freertos_t *)&res)!=NULL)
+    hthrd_t thr=hthrd_freertos_current();
+    if((*(hthrd_freertos_t *)&thr)!=NULL)
     {
-        hthrd_freertos_tcb_t *tcb=(hthrd_freertos_tcb_t *)(*(hthrd_freertos_t *)&res);
+        hthrd_freertos_tcb_t *tcb=(hthrd_freertos_tcb_t *)(*(hthrd_freertos_t *)&thr);
         /*
          * 设置退出信息
          */
