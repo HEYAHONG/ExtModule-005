@@ -147,6 +147,13 @@ int hthrd_freertos_create(hthrd_t *thr,hthrd_start_t func,void *arg )
              */
             tcb->flags.thread_detach=1;
         }
+        else
+        {
+            /*
+             * 传出TCB
+             */
+            (*(hthrd_freertos_t *)thr)=(hthrd_freertos_t)tcb;
+        }
     }
     else
     {
@@ -161,6 +168,11 @@ int hthrd_freertos_create(hthrd_t *thr,hthrd_start_t func,void *arg )
 int hthrd_freertos_equal(hthrd_t lhs,hthrd_t rhs )
 {
     int ret=-1;
+
+    if(sizeof(hthrd_t) < sizeof(hthrd_freertos_t))
+    {
+        return ret;
+    }
 
     if((*(hthrd_freertos_t *)&lhs)==(*(hthrd_freertos_t *)&rhs))
     {
