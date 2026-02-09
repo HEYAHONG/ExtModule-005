@@ -42,6 +42,8 @@ hdefaults_syscall_function_t hdefaults_syscall_function_find(uintptr_t number);
 #include "wrapper/hwrite.h"
 #include "wrapper/hlseek.h"
 #include "wrapper/hopen.h"
+#include "wrapper/hopenat.h"
+#include "wrapper/hioctl.h"
 #include "wrapper/hclock_getres.h"
 #include "wrapper/hclock_gettime.h"
 #include "wrapper/hclock_settime.h"
@@ -55,6 +57,7 @@ hdefaults_syscall_function_t hdefaults_syscall_function_find(uintptr_t number);
  */
 #include "hsyscall/time/hsyscall_time.h"
 #include "hsyscall/random/hsyscall_random.h"
+#include "hsyscall/file/hsyscall_file.h"
 
 #ifdef __cplusplus
 }

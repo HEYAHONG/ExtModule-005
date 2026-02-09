@@ -7,6 +7,7 @@
  * License:   MIT
  **************************************************************/
 #include "hdefaults.h"
+#include "hmemory.h"
 
 #if    defined(HDEFAULTS_OS_LINUX_SYSCALL32_lseek)
 #define HDEFAULTS_SYSCALL_HLSEEK  HDEFAULTS_OS_LINUX_SYSCALL32_lseek
@@ -16,12 +17,6 @@
 #define HDEFAULTS_SYSCALL_HLSEEK  HDEFAULTS_OS_FREEBSD_SYSCALL_lseek
 #endif
 
-#if defined(HDEFAULTS_OS_EMSCRIPTEN) && !defined(HLSEEK)
-/*
- * 默认不支持 Emscripten
- */
-#undef HDEFAULTS_SYSCALL_HLSEEK
-#endif // HDEFAULTS_OS_EMSCRIPTEN
 
 
 #ifdef HDEFAULTS_SYSCALL_HLSEEK
@@ -41,12 +36,12 @@ HDEFAULTS_USERCALL_DEFINE3(hlseek,HDEFAULTS_SYSCALL_HLSEEK,hlseek_off_t,int,fd,h
     hlseek_off_t ret=-1;
 #if defined(HLSEEK)
     ret=HLSEEK(fd,offset,whence);
-#elif defined(HDEFAULTS_OS_UNIX) || defined(HAVE_UNISTD_H)
+#elif (defined(HDEFAULTS_OS_UNIX) || defined(HAVE_UNISTD_H)) && (!defined(HDEFAULTS_OS_EMSCRIPTEN))
     ret=lseek(fd,offset,whence);
 #elif defined(HDEFAULTS_OS_WINDOWS)
     ret=_lseek(fd,offset,whence);
-#else
-
+#elif !defined(HDEFAULTS_SYSCALL_NO_HFILEDESCRIPTOR)
+    ret=hfiledescriptor_lseek(fd,offset,whence);
 #endif
     return ret;
 }

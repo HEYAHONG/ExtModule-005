@@ -7,6 +7,7 @@
  * License:   MIT
  **************************************************************/
 #include "hdefaults.h"
+#include "hmemory.h"
 
 #if    defined(HDEFAULTS_OS_LINUX_SYSCALL32_close)
 #define HDEFAULTS_SYSCALL_HCLOSE  HDEFAULTS_OS_LINUX_SYSCALL32_close
@@ -16,12 +17,6 @@
 #define HDEFAULTS_SYSCALL_HCLOSE  HDEFAULTS_OS_FREEBSD_SYSCALL_close
 #endif
 
-#if defined(HDEFAULTS_OS_EMSCRIPTEN) && !defined(HCLOSE)
-/*
- * 默认不支持 Emscripten
- */
-#undef HDEFAULTS_SYSCALL_HCLOSE
-#endif // HDEFAULTS_OS_EMSCRIPTEN
 
 
 #ifdef HDEFAULTS_SYSCALL_HCLOSE
@@ -41,12 +36,12 @@ HDEFAULTS_USERCALL_DEFINE1(hclose,HDEFAULTS_SYSCALL_HCLOSE,int,int,fd)
     int ret=-1;
 #if defined(HCLOSE)
     ret=HCLOSE(fd);
-#elif defined(HDEFAULTS_OS_UNIX) || defined(HAVE_UNISTD_H)
+#elif (defined(HDEFAULTS_OS_UNIX) || defined(HAVE_UNISTD_H)) && (!defined(HDEFAULTS_OS_EMSCRIPTEN))
     ret=close(fd);
 #elif defined(HDEFAULTS_OS_WINDOWS)
     ret=_close(fd);
-#else
-
+#elif !defined(HDEFAULTS_SYSCALL_NO_HFILEDESCRIPTOR)
+    ret=hfiledescriptor_close(fd);
 #endif
     return ret;
 }
