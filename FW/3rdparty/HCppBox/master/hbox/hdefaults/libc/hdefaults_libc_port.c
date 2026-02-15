@@ -62,6 +62,9 @@
 #include "wrapper/stdio/hferror.c"
 #include "wrapper/stdio/hfread.c"
 #include "wrapper/stdio/hfwrite.c"
+#include "wrapper/stdio/hfclose.c"
+#include "wrapper/stdio/hfopen.c"
+#include "wrapper/stdio/hfseek.c"
 
 /*
  * stdlib

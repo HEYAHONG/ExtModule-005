@@ -31,6 +31,10 @@ extern "C"
 #include "wrapper/stdio/hferror.h"
 #include "wrapper/stdio/hfread.h"
 #include "wrapper/stdio/hfwrite.h"
+#include "wrapper/stdio/hfclose.h"
+#include "wrapper/stdio/hfopen.h"
+#include "wrapper/stdio/hfseek.h"
+
 
 /*
  * stdlib

@@ -1,27 +1,27 @@
 /***************************************************************
- * Name:      hferror.c
- * Purpose:   实现hferror接口
+ * Name:      hfopen.c
+ * Purpose:   实现hfopen接口
  * Author:    HYH (hyhsystem.cn)
- * Created:   2025-06-22
+ * Created:   2026-02-13
  * Copyright: HYH (hyhsystem.cn)
  * License:   MIT
  **************************************************************/
-#include "hferror.h"
+#include "hfopen.h"
 #include "hdefaults.h"
 #include "stdlib.h"
 
-#ifdef HFERROR
-extern int HFERROR(FILE *stream );
-#endif // HFERROR
+#ifdef HFOPEN
+extern FILE * HFOPEN(const char* filename, const char* mode );
+#endif // HFOPEN
 
-int hferror( FILE *stream )
+FILE * hfopen(const char* filename, const char* mode)
 {
-#if defined(HFERROR)
-    return HFERROR(stream);
+#if defined(HFOPEN)
+    return HFOPEN(filename,mode);
 #elif ((HDEFAULTS_LIBC_OPTIMIZE_LEVEL) > 0) && !defined(HDEFAULTS_LIBC_TINY) && !defined(HLIBC_NO_STDIO)
-    return hlibc_ferror((hfile_t *)stream);
+    return (FILE *)hlibc_fopen(filename,mode);
 #else
-    return ferror(stream);
+    return fopen(filename,mode);
 #endif
 }
 
