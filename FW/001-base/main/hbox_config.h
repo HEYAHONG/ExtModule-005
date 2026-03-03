@@ -1,6 +1,14 @@
 #ifndef __HBOX_CONFIG_H__
 #define __HBOX_CONFIG_H__
 
+/*
+ * 处于FreeRTOS环境
+ */
+#define FREERTOS 1
+#if defined(HDEFAULTS_IMPLEMENTATION)
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#endif
 #define HDEFAULTS_TICK_GET hbox_tick_get
 #define HDEFAULTS_MUTEX_LOCK hbox_enter_critical
 #define HDEFAULTS_MUTEX_UNLOCK hbox_exit_critical
@@ -53,6 +61,8 @@
 #define HTHRD_FREERTOS_FREERTOS_HEADER "freertos/FreeRTOS.h"
 #define HTHRD_FREERTOS_TASK_HEADER     "freertos/task.h"
 #define HTHRD_FREERTOS_STACK_SIZE      (4096)
+
+
 
 
 #endif  // __HBOX_CONFIG_H__
