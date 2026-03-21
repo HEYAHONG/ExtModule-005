@@ -12,24 +12,12 @@
 #include "hdefaults.h"
 #include "h3rdparty.h"
 
-//定义内存分配函数
-#define malloc hmalloc
-#define free   hfree
-#define calloc hcalloc
+#include "h3rdparty/patch/heap.c"
 
-//定义文件操作
-#ifdef  ferror
-#undef  ferror
-#endif
-#define ferror hferror
-#ifdef  fread
-#undef  fread
-#endif
-#define fread  hfread
-#ifdef  fwrite
-#undef  fwrite
-#endif
-#define fwrite hfwrite
+#include "h3rdparty/patch/cfile.c"
+
+#include "h3rdparty/patch/disable_armcc_gnuc_micro.c"
+
 
 #include "stdarg.h"
 
@@ -37,9 +25,6 @@
  * 修复armcc下的警告
  */
 #ifdef __ARMCC_VERSION
-#ifdef __GNUC__
-#undef __GNUC__
-#endif // __GNUC__
 #define LZ4_DISABLE_DEPRECATE_WARNINGS 1
 #endif // __ARMCC_VERSION
 

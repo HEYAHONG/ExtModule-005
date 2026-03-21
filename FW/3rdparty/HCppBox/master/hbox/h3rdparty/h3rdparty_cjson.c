@@ -12,13 +12,11 @@
 #include "hdefaults.h"
 #include "h3rdparty.h"
 
-//定义内存分配函数
-#define malloc hmalloc
-#define free   hfree
-#define calloc hcalloc
-#define realloc hrealloc
+#include "h3rdparty/patch/heap.c"
 
+#include "h3rdparty/patch/disable_armcc_gnuc_micro.c"
 
+#include "h3rdparty/patch/armclang_diagnostic_ignored.c"
 
 #ifndef  H3RDPARTY_USING_SYSTEM_CJSON
 
@@ -29,11 +27,6 @@
 #define  CJSON_HIDE_SYMBOLS 1
 #endif
 
-#ifdef __ARMCC_VERSION
-#ifdef __GNUC__
-#undef __GNUC__
-#endif // __GNUC__
-#endif // __ARMCC_VERSION
 #include "3rdparty/cJSON/cJSON.c"
 #endif // H3RDPARTY_USING_SYSTEM_CJSON
 

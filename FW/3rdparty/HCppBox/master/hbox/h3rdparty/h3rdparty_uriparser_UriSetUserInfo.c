@@ -17,23 +17,10 @@
 #endif
 #define printf hprintf
 
-//定义内存分配函数
-#define malloc hmalloc
-#define free   hfree
-#define calloc hcalloc
-#define realloc hrealloc
+#include "h3rdparty/patch/heap.c"
 
+#include "h3rdparty/patch/armcc_diag_suppress.c"
 
-/*
- * 修复armcc下的警告
- */
-#ifdef __ARMCC_VERSION
-#ifndef __clang__
-#pragma diag_suppress 68
-#pragma diag_suppress 111
-#pragma diag_suppress 546
-#endif
-#endif // __ARMCC_VERSION
 
 
 
