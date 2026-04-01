@@ -58,6 +58,31 @@ enum
  */
 int hmtx_type_cstd(int wrapper_type);
 
+/**
+ * \brief 定义hthread_local
+ */
+#if defined(__cplusplus)
+#if defined(HAVE_CXX_THREAD_LOCAL) && !defined(hthread_local)
+#if !defined(HAVE_THREAD_LOCAL)
+#define HAVE_THREAD_LOCAL 1
+#endif
+#define hthread_local thread_local
+#endif
+#else
+#if defined(HAVE_C_THREAD_LOCAL) && !defined(hthread_local)
+#if !defined(HAVE_THREAD_LOCAL)
+#define HAVE_THREAD_LOCAL 1
+#endif
+#if defined(__STDC_VERSION__) && ((__STDC_VERSION__) < 202311L) && !defined(thread_local)
+#define thread_local _Thread_local
+#endif
+#define hthread_local thread_local
+#endif
+#endif
+#if !defined(hthread_local)
+#define hthread_local
+#endif
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
