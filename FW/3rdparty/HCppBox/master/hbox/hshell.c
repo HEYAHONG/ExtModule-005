@@ -11,8 +11,4 @@
 
 #include "hshell.h"
 
-#include "hshell/hshell.c"
-#include "hshell/hshell_ctlseq.c"
-#include "hshell/hshell_defaults.c"
-#include "hshell/hshell_context.c"
-#include "hshell/hshell_command.c"
+#include "hshell/hshellv1.c"

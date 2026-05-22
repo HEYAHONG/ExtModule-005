@@ -60,5 +60,5 @@ fi
 
 if [ -f "${script_dir}/HCppBox/CMakeLists.txt" ]; then
 	rm -rf "${script_dir}/master/" 2>/dev/null
-	rsync -rl --progress --delete --exclude='rom' --exclude='.git' --exclude='*.png' --exclude='*.jpg' --exclude="htools" --exclude="hcppbox" --exclude="hrc" --exclude="doc" --exclude="test" --exclude="*.md" "${script_dir}/HCppBox/" "${script_dir}/master/"
+	rsync -rl --progress --delete --exclude='rom' --exclude='.git' --exclude='*.png' --exclude='*.jpg' --exclude="htools" --exclude="hcppbox" --exclude="hplatformbox" --exclude="hrc" --exclude="doc" --exclude="test" --exclude="*.md" "${script_dir}/HCppBox/" "${script_dir}/master/"
 fi

@@ -95,6 +95,14 @@
  */
 /* #define FREERTOS */
 
+/** \brief 无线程库
+ */
+/* #define __STDC_NO_THREADS__ */
+
+/** \brief 无原子库
+ */
+/* #define __STDC_NO_ATOMICS__ */
+
 /* ========== hdefaults/libc ========== */
 
 /** \brief 用户实现的errno变量
@@ -446,49 +454,57 @@
  *
  * 默认优化级别为0（直接包装原C运行库的函数）。无操作系统时应当定义为1.
  */
-/* #HDEFAULTS_LIBC_OPTIMIZE_LEVEL */
+/* #define HDEFAULTS_LIBC_OPTIMIZE_LEVEL */
 
 /** \brief 精简C运行库包装
  *
  * 用于减小代码体积。注意:此选项将关闭libc包装的初始化与循环调用，可能影响部分功能，此时用户需要手动初始化或循环调用用到的功能。
  */
-/* #HDEFAULTS_LIBC_TINY */
+/* #define HDEFAULTS_LIBC_TINY */
 
 /** \brief 不实现hlibc原子标志
  *
  * 可用于在编译器垃圾回收不完善时减少资源占用。
  */
-/* #HLIBC_NO_ATOMIC_FLAG */
+/* #define HLIBC_NO_ATOMIC_FLAG */
 
 /** \brief 不实现hlibc环境变量
  *
  * 可用于在编译器垃圾回收不完善时减少资源占用。
  */
-/* #HLIBC_NO_ENV */
+/* #define HLIBC_NO_ENV */
 
 /** \brief 不实现hlibc
  *
  * 可用于在编译器垃圾回收不完善时减少资源占用,将强制启用`HDEFAULTS_LIBC_TINY`。
  */
-/* #HLIBC_NO_IMPLEMENTATION */
+/* #define HLIBC_NO_IMPLEMENTATION */
 
 /** \brief 不实现hlibc标准io
  *
  * 可用于在编译器垃圾回收不完善时减少资源占用。
  */
-/* #HLIBC_NO_STDIO */
+/* #define HLIBC_NO_STDIO */
 
 /** \brief 不实现hlibc线程
  *
  * 可用于在编译器垃圾回收不完善时减少资源占用。
  */
-/* #HLIBC_NO_THREADS */
+/* #define HLIBC_NO_THREADS */
 
 /** \brief 不实现hlibc时间
  *
  * 可用于在编译器垃圾回收不完善时减少资源占用。
  */
-/* #HLIBC_NO_TIME */
+/* #define HLIBC_NO_TIME */
+
+/** \brief 支持原子
+ */
+/* #define HAVE_ATOMIC */
+
+/** \brief 支持thread_local
+ */
+/* #define HAVE_THREAD_LOCAL */
 
 
 /* ========== hdefaults/libc/hlibc/env ========== */
@@ -789,6 +805,40 @@
  */
 /* #define HSYSCALL_CLOCK_SETTIME_HOOK */
 
+/* ========== cpp ========== */
+
+/** \brief 不覆写new和delete操作符
+ *
+ * 当需要使用编译器提供的new和delete操作符时（如自定义堆管理器需要记录分配信息），可定义此宏。
+ */
+/* #define HCPPRT_NO_NEW_AND_DELETE_OVERRIDE */
+
+/** \brief 不使用C++原子操作
+ *
+ * 当C++运行库不支持原子操作时可定义此宏，此时应配合HCPPRT_NO_NEW_AND_DELETE_OVERRIDE使用。
+ */
+/* #define HCPPRT_NO_ATOMIC */
+
+/** \brief 系统循环不使用自动初始化
+ *
+ * 启用后用户需要在合适时机手动调用系统循环的初始化函数。
+ */
+/* #define HCPPRT_SYSTEM_LOOP_NO_AUTOINIT */
+
+/** \brief 工作队列不使用自动初始化
+ *
+ * 启用后用户需要在合适时机手动调用工作队列的初始化函数。
+ */
+/* #define HCPPRT_SYSTEM_WORKQUEUE_NO_AUTOINIT */
+
+/** \brief 使用构造函数实现初始化
+ *
+ * 启用后将使用构造函数实现部分初始化功能，此选项可能导致以下问题：
+ * - 在某些嵌入式环境下可能需要链接额外的初始化代码（主要是一些静态对象的构造与析构）
+ * - 部分编译环境下可能导致启动代码变复杂
+ */
+/* #define HCPPRT_USE_CTORS */
+
 /* ========== hevent ========== */
 
 /** \brief 用户循环个数
@@ -826,6 +876,14 @@
  * 默认不定义
  */
 /* #define HEVENTCHAIN_NO_SLIM */
+
+/* ========== hgui/pixel ========== */
+
+/** \brief 支持最大颜色位数
+ *
+ * 默认状态下最高支持32位色，更高位数需要通过定义此宏定义启用。
+ */
+/* #define HGUI_PIXEL_USING_MAX_BITS */
 
 /* ========== hgui/hgui_gui_scene1 ========== */
 
@@ -1041,6 +1099,99 @@
  */
 /* #define HSOFTWARETIMER_CUSTOM_LOOP */
 
+/** \brief 低级初始化列表1
+ *
+ * 列表中可包含一项或者多项返回值与参数均为void的函数地址，每个函数地址后跟逗号(,)
+ */
+/* #define HRUNTIME_INIT_LOWLEVEL_LIST1 */
+
+/** \brief 低级初始化列表2
+ *
+ * 格式同HRUNTIME_INIT_LOWLEVEL_LIST1
+ */
+/* #define HRUNTIME_INIT_LOWLEVEL_LIST2 */
+
+/** \brief 低级初始化列表3
+ *
+ * 格式同HRUNTIME_INIT_LOWLEVEL_LIST1
+ */
+/* #define HRUNTIME_INIT_LOWLEVEL_LIST3 */
+
+/** \brief 低级初始化列表4
+ *
+ * 格式同HRUNTIME_INIT_LOWLEVEL_LIST1
+ */
+/* #define HRUNTIME_INIT_LOWLEVEL_LIST4 */
+
+/** \brief 初始化列表1
+ *
+ * 列表中可包含一项或者多项返回值与参数均为void的函数地址，每个函数地址后跟逗号(,)
+ */
+/* #define HRUNTIME_INIT_LIST1 */
+
+/** \brief 初始化列表2
+ *
+ * 格式同HRUNTIME_INIT_LIST1
+ */
+/* #define HRUNTIME_INIT_LIST2 */
+
+/** \brief 初始化列表3
+ *
+ * 格式同HRUNTIME_INIT_LIST1
+ */
+/* #define HRUNTIME_INIT_LIST3 */
+
+/** \brief 初始化列表4
+ *
+ * 格式同HRUNTIME_INIT_LIST1
+ */
+/* #define HRUNTIME_INIT_LIST4 */
+
+/** \brief 循环列表1
+ *
+ * 列表中可包含一项或者多项返回值与参数均为void的函数地址，每个函数地址后跟逗号(,)
+ */
+/* #define HRUNTIME_LOOP_LIST1 */
+
+/** \brief 循环列表2
+ *
+ * 格式同HRUNTIME_LOOP_LIST1
+ */
+/* #define HRUNTIME_LOOP_LIST2 */
+
+/** \brief 循环列表3
+ *
+ * 格式同HRUNTIME_LOOP_LIST1
+ */
+/* #define HRUNTIME_LOOP_LIST3 */
+
+/** \brief 循环列表4
+ *
+ * 格式同HRUNTIME_LOOP_LIST1
+ */
+/* #define HRUNTIME_LOOP_LIST4 */
+
+/* ========== hruntime/hstacklesscoroutine ========== */
+
+/** \brief 使用裸机模式运行协程
+ *
+ * 使用裸机模式运行时，将直接使用内联汇编实现上下文切换，此时请注意汇编语法是否与编译器兼容。
+ */
+/* #define HSTACKLESSCOROUTINE2_BARE_MACHINE */
+
+/** \brief 不使用裸机模式运行协程
+ *
+ * 优先级较HSTACKLESSCOROUTINE2_BARE_MACHINE高。
+ */
+/* #define HSTACKLESSCOROUTINE2_NO_BARE_MACHINE */
+
+/* ========== hsimulator/mcs_51 ========== */
+
+/** \brief MCS-51通用时钟频率
+ *
+ * 单位为Hz。
+ */
+/* #define HS_MCS_51_COMMON_CLK_FREQ */
 
 /* ========== hcompiler ========== */
 
@@ -1048,33 +1199,33 @@
  *
  * 默认不启用。
  */
-/* #HCOMPILER_DLLSPEC_IMPORT */
+/* #define HCOMPILER_DLLSPEC_IMPORT */
 
 
-/* ========== hsoftplc ========== */
+/* ========== hstandalone/hsoftplc/hsoftplc ========== */
 
 /** \brief 启用本组件，启用时需要定义为1
  *
  * 默认不启用。
  */
-/* #HSOFTPLC */
+/* #define HSOFTPLC */
 
 /** \brief 宏函数，参数1为节拍间隔，当允许进入组态逻辑时需要返回真，否则返回假
  *
  * 默认不定义。如不定义，将使用以ms为单位的系统节拍，在绝大多数MCU上已够用。但如果组态逻辑中采用的小于1ms的节拍间隔，PLC循环将无法正常运行，此时必须定义此宏函数，并且实现以ns为单位的时间检查。
  */
-/* #HSOFTPLC_LOOP_CHECK_TIMEOUT */
+/* #define HSOFTPLC_LOOP_CHECK_TIMEOUT */
 
 /** \brief 宏函数，参数1为秒，参数2为纳秒，均需要传出。用于更新PLC逻辑的当前时间
  *
  * 默认不定义。
  */
-/* #HSOFTPLC_LOOP_CURRENT_TIME */
+/* #define HSOFTPLC_LOOP_CURRENT_TIME */
 
 /** \brief 不启用动态生成的变量。若启用，用户需要手工定义相关变量。
  *
  * 默认不启用。推荐使用弱符号预定义相关变量而不是启用此选项。
  */
-/* #HSOFTPLC_NO_DYNAMIC_LOCATED_VARIABLES */
+/* #define HSOFTPLC_NO_DYNAMIC_LOCATED_VARIABLES */
 
 #endif /* HBOX_CONFIG_H */
