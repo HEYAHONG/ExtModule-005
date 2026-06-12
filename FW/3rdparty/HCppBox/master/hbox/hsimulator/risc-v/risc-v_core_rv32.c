@@ -13,14 +13,24 @@
 #include "h3rdparty.h"
 #include H3RDPARTY_SOFTFP_HEADER
 #include H3RDPARTY_SOFTFLOAT_HEADER
+#include "hdefaults.h"
 
 struct hs_risc_v_core_rv32
 {
     hs_risc_v_core_rv32_io_t    io;
     void*                       usr;
-    uint32_t                    instruction_sets; /**< 支持的扩展指令集 */
-    uint32_t                    exception_pending; /**< 等待执行的异常（狭义的异常） */
-    uint32_t                    interrupt_pending; /**< 等待执行的中断 */
+    uint32_t                    instruction_sets;       /**< 支持的扩展指令集 */
+    uint32_t                    exception_pending;      /**< 等待执行的异常（狭义的异常） */
+    uint32_t                    interrupt_pending;      /**< 等待执行的中断 */
+    struct
+    {
+        uint64_t                mtime;                  /**< 全局计数寄存器 */
+        uint64_t                mtimecmp;               /**< 全局比较寄存器 */
+    }                           clint;
+    struct
+    {
+        uint32_t                wfi_enable:1;           /**< 当前已启用WFI */
+    }                           flags;
 };
 
 size_t hs_risc_v_core_rv32_size(void)
@@ -42,7 +52,7 @@ hs_risc_v_core_rv32_t *hs_risc_v_core_rv32_init(void *mem,hs_risc_v_core_rv32_io
     return ret;
 }
 
-static uint32_t hs_risc_v_core_rv32_pc_read(hs_risc_v_core_rv32_t *core)
+static inline  uint32_t hs_risc_v_core_rv32_pc_read(hs_risc_v_core_rv32_t *core)
 {
     if(core!=NULL && core->io!=NULL)
     {
@@ -55,7 +65,7 @@ static uint32_t hs_risc_v_core_rv32_pc_read(hs_risc_v_core_rv32_t *core)
     return 0;
 }
 
-static void hs_risc_v_core_rv32_pc_write(hs_risc_v_core_rv32_t *core,uint32_t pc_value)
+static inline  void hs_risc_v_core_rv32_pc_write(hs_risc_v_core_rv32_t *core,uint32_t pc_value)
 {
     if(core!=NULL && core->io!=NULL)
     {
@@ -67,7 +77,7 @@ static void hs_risc_v_core_rv32_pc_write(hs_risc_v_core_rv32_t *core,uint32_t pc
 }
 
 
-static uint32_t hs_risc_v_core_rv32_x_register_read(hs_risc_v_core_rv32_t *core,size_t address)
+static inline  uint32_t hs_risc_v_core_rv32_x_register_read(hs_risc_v_core_rv32_t *core,size_t address)
 {
     if(address==0)
     {
@@ -84,7 +94,7 @@ static uint32_t hs_risc_v_core_rv32_x_register_read(hs_risc_v_core_rv32_t *core,
     return 0;
 }
 
-static void hs_risc_v_core_rv32_x_register_write(hs_risc_v_core_rv32_t *core,size_t address,uint32_t reg_value)
+static inline  void hs_risc_v_core_rv32_x_register_write(hs_risc_v_core_rv32_t *core,size_t address,uint32_t reg_value)
 {
     if(address==0)
     {
@@ -99,7 +109,7 @@ static void hs_risc_v_core_rv32_x_register_write(hs_risc_v_core_rv32_t *core,siz
     }
 }
 
-static uint32_t hs_risc_v_core_rv32_f_register_read32(hs_risc_v_core_rv32_t *core,size_t address)
+static inline  uint32_t hs_risc_v_core_rv32_f_register_read32(hs_risc_v_core_rv32_t *core,size_t address)
 {
     if(core!=NULL && core->io!=NULL)
     {
@@ -112,7 +122,7 @@ static uint32_t hs_risc_v_core_rv32_f_register_read32(hs_risc_v_core_rv32_t *cor
     return 0;
 }
 
-static void hs_risc_v_core_rv32_f_register_write32(hs_risc_v_core_rv32_t *core,size_t address,uint32_t reg_value)
+static inline  void hs_risc_v_core_rv32_f_register_write32(hs_risc_v_core_rv32_t *core,size_t address,uint32_t reg_value)
 {
     if(core!=NULL && core->io!=NULL)
     {
@@ -123,7 +133,7 @@ static void hs_risc_v_core_rv32_f_register_write32(hs_risc_v_core_rv32_t *core,s
     }
 }
 
-static uint32_t hs_risc_v_core_rv32_csr_read_default_value(hs_risc_v_core_rv32_t *core,size_t address)
+static inline  uint32_t hs_risc_v_core_rv32_csr_read_default_value(hs_risc_v_core_rv32_t *core,size_t address)
 {
     uint32_t reg_value=0;
     switch(address)
@@ -164,7 +174,10 @@ static uint32_t hs_risc_v_core_rv32_csr_read_default_value(hs_risc_v_core_rv32_t
     break;
     case CSR_MSTATUS:
     {
-
+        /*
+         * 默认特权模式为3
+         */
+        reg_value=MSTATUS_MPP;
     }
     break;
     case CSR_MSTATUSH:
@@ -189,10 +202,7 @@ static uint32_t hs_risc_v_core_rv32_csr_read_default_value(hs_risc_v_core_rv32_t
     break;
     case CSR_MIP:
     {
-        /*
-         * 默认为内核等待执行的中断（不包括正在执行的中断）。如果涉及到比较复杂的中断系统，用户需要自行实现mip。
-         */
-        reg_value=core->interrupt_pending;
+
     }
     break;
     case CSR_MIE:
@@ -209,7 +219,7 @@ static uint32_t hs_risc_v_core_rv32_csr_read_default_value(hs_risc_v_core_rv32_t
     return 0;
 }
 
-static uint32_t hs_risc_v_core_rv32_csr_read(hs_risc_v_core_rv32_t *core,size_t address)
+static inline  uint32_t hs_risc_v_core_rv32_csr_read(hs_risc_v_core_rv32_t *core,size_t address)
 {
     if(core!=NULL && core->io!=NULL)
     {
@@ -223,7 +233,7 @@ static uint32_t hs_risc_v_core_rv32_csr_read(hs_risc_v_core_rv32_t *core,size_t 
     return 0;
 }
 
-static void hs_risc_v_core_rv32_csr_write(hs_risc_v_core_rv32_t *core,size_t address,uint32_t reg_value)
+static inline  void hs_risc_v_core_rv32_csr_write(hs_risc_v_core_rv32_t *core,size_t address,uint32_t reg_value)
 {
     if(core!=NULL && core->io!=NULL)
     {
@@ -234,7 +244,7 @@ static void hs_risc_v_core_rv32_csr_write(hs_risc_v_core_rv32_t *core,size_t add
     }
 }
 
-static uint32_t  hs_risc_v_core_rv32_instruction_read(hs_risc_v_core_rv32_t *core)
+static inline  uint32_t  hs_risc_v_core_rv32_instruction_read(hs_risc_v_core_rv32_t *core)
 {
     if(core!=NULL && core->io!=NULL)
     {
@@ -263,13 +273,114 @@ if(!is_instruction_processed)\
 
 #endif // HS_RISC_V_CORE_RV32_EXEC_INSN_MATCH
 
-static void hs_risc_v_core_rv32_exec_exception_raise(hs_risc_v_core_rv32_t *core,int cause,uint32_t instruction_pc,uint32_t instruction)
+static inline  void hs_risc_v_core_rv32_exec_exception_raise(hs_risc_v_core_rv32_t *core,int cause,uint32_t instruction_pc,uint32_t instruction)
 {
-    //设置标志位，下次指令执行时可能进入跳转相应处理函数。
+    //设置，下次指令执行时可能进入跳转相应处理函数。
     hs_risc_v_core_rv32_exception_raise(core,cause,false);
 }
 
-static bool hs_risc_v_core_rv32_exec_io(hs_risc_v_core_rv32_t *core,uint32_t opt,uint32_t address,uint8_t *data,size_t len)
+static inline void hs_risc_v_core_rv32_exec_exception_mret(hs_risc_v_core_rv32_t *core)
+{
+    //从mepc恢复地址
+    uint32_t mepc=hs_risc_v_core_rv32_csr_read(core,CSR_MEPC);
+    hs_risc_v_core_rv32_pc_write(core,mepc);
+    uint32_t mstatus=hs_risc_v_core_rv32_csr_read(core,CSR_MSTATUS);
+    /*
+     * 复制MPIE到MIE
+     */
+    mstatus |= ((mstatus&MSTATUS_MPIE)!=0?MSTATUS_MIE:0);
+    /*
+     * TODO:还原MPP
+     */
+
+    hs_risc_v_core_rv32_csr_write(core,CSR_MSTATUS,mstatus);
+
+}
+
+static inline  void hs_risc_v_core_rv32_exec_interrupt_raise(hs_risc_v_core_rv32_t *core,int cause)
+{
+    hs_risc_v_core_rv32_exception_raise(core,cause,true);
+}
+
+
+static inline void hs_risc_v_core_rv32_exec_clint(hs_risc_v_core_rv32_t *core)
+{
+    if(core==NULL)
+    {
+        return;
+    }
+
+    /*
+     * 此处只实现了clint的部分功能，用户需要手动实现软件中断，最终向mip写入相应的位
+     */
+
+    {
+        /*
+         * 处理定时器中断
+         */
+        uint32_t mip=hs_risc_v_core_rv32_csr_read(core,CSR_MIP);
+        if(core->clint.mtimecmp > core->clint.mtime)
+        {
+            mip &= (~MIP_MTIP);
+        }
+        else
+        {
+            mip |= (MIP_MTIP);
+        }
+        hs_risc_v_core_rv32_csr_write(core,CSR_MIP,mip);
+    }
+
+    uint32_t mstatus=hs_risc_v_core_rv32_csr_read(core,CSR_MSTATUS);
+
+    if(((mstatus&MSTATUS_MIE)!=0) && (core->interrupt_pending==0))
+    {
+        uint32_t mip=hs_risc_v_core_rv32_csr_read(core,CSR_MIP);
+        uint32_t mie=hs_risc_v_core_rv32_csr_read(core,CSR_MIE);
+
+        uint32_t interrupt=(mip&mie);
+
+        /*
+         * 按照MEI、MSI、MTI的优先级顺序处理中断
+         */
+         if((interrupt & MIP_MEIP)!=0)
+         {
+             /*
+              * 外部中断
+              */
+             hs_risc_v_core_rv32_exec_interrupt_raise(core,11);
+         }
+         else if((interrupt & MIP_MSIP)!=0)
+         {
+             /*
+              * 软件中断
+              */
+             hs_risc_v_core_rv32_exec_interrupt_raise(core,3);
+         }
+         else if((interrupt & MIP_MTIP)!=0)
+         {
+             /*
+              * 定时器中断
+              */
+             hs_risc_v_core_rv32_exec_interrupt_raise(core,7);
+         }
+
+    }
+}
+
+static inline void hs_risc_v_core_rv32_cycle_inc(hs_risc_v_core_rv32_t *core)
+{
+    uint32_t cycle=hs_risc_v_core_rv32_csr_read(core,CSR_CYCLE);
+    uint32_t cycleh=hs_risc_v_core_rv32_csr_read(core,CSR_CYCLEH);
+    cycle++;
+    hs_risc_v_core_rv32_csr_write(core,CSR_CYCLE,cycle);
+    if(cycle==0)
+    {
+        cycleh++;
+        hs_risc_v_core_rv32_csr_write(core,CSR_CYCLEH,cycleh);
+    }
+}
+
+static inline  bool hs_risc_v_core_rv32_exec_io(hs_risc_v_core_rv32_t *core,uint32_t opt,uint32_t address,uint8_t *data,size_t len)
 {
     if(core!=NULL && core->io!=NULL)
     {
@@ -279,19 +390,35 @@ static bool hs_risc_v_core_rv32_exec_io(hs_risc_v_core_rv32_t *core,uint32_t opt
     return false;
 }
 
-static void hs_risc_v_core_rv32_exec(hs_risc_v_core_rv32_t * core)
+static inline  void hs_risc_v_core_rv32_exec(hs_risc_v_core_rv32_t * core)
 {
     if(core==NULL || core->io==NULL)
     {
         return;
     }
 
+    /*
+     * 处理WFI指令
+     */
+    if(core->flags.wfi_enable==1)
+    {
+        /*
+         * 系统睡眠中
+         */
+        if(core->interrupt_pending!=0 || core->exception_pending!=0)
+        {
+            core->flags.wfi_enable=0;
+        }
+        return;
+    }
 
     uint32_t instruction= hs_risc_v_core_rv32_instruction_read(core);
     uint32_t pc=hs_risc_v_core_rv32_pc_read(core);
     core->io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_INSTRUCTION_ENTER | (uint32_t)HS_RISC_V_CORE_RV32_IO_OPERATOR_HW,pc,(uint8_t*)&instruction,sizeof(instruction),core->usr);
     uint32_t next_pc=pc+hs_risc_v_common_instruction_length(instruction);
     hs_risc_v_core_rv32_pc_write(core,next_pc);
+    uint32_t load_or_store_addr=0;
+    bool     is_instruction_xret=false;         /**<指令是否是XRET，当其为XRET时跳过本次指令结束的异常处理*/
 
     //指令是否正确处理，当指令被正确处理时，需要将此标志置位true
     bool is_instruction_processed=false;
@@ -352,6 +479,7 @@ static void hs_risc_v_core_rv32_exec(hs_risc_v_core_rv32_t * core)
                 //HS_RISC_V_COMMOM_MEMORY_BYTEORDER_FIX(value);
                 hs_risc_v_core_rv32_x_register_write(core,rd,(uint32_t)value.value);
             });
+            load_or_store_addr=rs1_value+((int32_t)i_imm);
         }
         break;
         case  HS_RISC_V_COMMON_INSTRUCTION_32BIT_BASE_OPCODE_STORE :
@@ -382,6 +510,7 @@ static void hs_risc_v_core_rv32_exec(hs_risc_v_core_rv32_t * core)
                 //HS_RISC_V_COMMOM_MEMORY_BYTEORDER_FIX(value);
                 hs_risc_v_core_rv32_exec_io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_MEMORY_WRITE,rs1_value+((int32_t)imm),value.bytes,sizeof(value.bytes));
             });
+            load_or_store_addr=rs1_value+((int32_t)imm);
         }
         break;
         case HS_RISC_V_COMMON_INSTRUCTION_32BIT_BASE_OPCODE_MADD:
@@ -632,7 +761,20 @@ static void hs_risc_v_core_rv32_exec(hs_risc_v_core_rv32_t * core)
             });
             HS_RISC_V_CORE_RV32_EXEC_INSN_MATCH(ebreak,
             {
+                int cause=HS_RISC_V_OPCODES_EXCEPTION_NAME(CAUSE_BREAKPOINT);    //默认将执行BREAKPOINT
+                hs_risc_v_core_rv32_exec_exception_raise(core,cause,pc,instruction);
                 hs_risc_v_core_rv32_exec_io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_INSTRUCTION_EBREAK_EXEC,pc,(uint8_t*)&instruction,sizeof(instruction));
+            });
+            HS_RISC_V_CORE_RV32_EXEC_INSN_MATCH(mret,
+            {
+                hs_risc_v_core_rv32_exec_exception_mret(core);
+                is_instruction_xret=true;
+                hs_risc_v_core_rv32_exec_io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_INSTRUCTION_MRET_EXEC,pc,(uint8_t*)&instruction,sizeof(instruction));
+            });
+            HS_RISC_V_CORE_RV32_EXEC_INSN_MATCH(wfi,
+            {
+                core->flags.wfi_enable=1;
+                hs_risc_v_core_rv32_exec_io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_INSTRUCTION_WFI_EXEC,pc,(uint8_t*)&instruction,sizeof(instruction));
             });
         }
         break;
@@ -1080,10 +1222,93 @@ static void hs_risc_v_core_rv32_exec(hs_risc_v_core_rv32_t * core)
     if(!is_instruction_processed)
     {
         //指令未处理，可能是custom指令
-        hs_risc_v_core_rv32_exec_io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_CUSTOM_INSTRUCTION_EXEC,pc,(uint8_t*)&instruction,sizeof(instruction));
+        if(!hs_risc_v_core_rv32_exec_io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_CUSTOM_INSTRUCTION_EXEC,pc,(uint8_t*)&instruction,sizeof(instruction)))
+        {
+            int cause=HS_RISC_V_OPCODES_EXCEPTION_NAME(CAUSE_ILLEGAL_INSTRUCTION);    //非法指令
+            hs_risc_v_core_rv32_exec_exception_raise(core,cause,pc,instruction);
+        }
     }
 
     core->io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_INSTRUCTION_EXIT | (uint32_t)HS_RISC_V_CORE_RV32_IO_OPERATOR_HW,pc,(uint8_t*)&instruction,sizeof(instruction),core->usr);
+
+    /*
+     * 异常处理
+     */
+    if((core->exception_pending !=0 || core->interrupt_pending!=0) && (!is_instruction_xret))
+    {
+        uint32_t mstatus=hs_risc_v_core_rv32_csr_read(core,CSR_MSTATUS);
+        bool mie=((mstatus&MSTATUS_MIE)!=0);
+        bool skip_exception=false;
+        if(core->exception_pending!=0)
+        {
+            /*
+             * 异常的最高位为0
+             */
+            core->exception_pending &= (~(1ULL << 31));
+            hs_risc_v_core_rv32_csr_write(core,CSR_MCAUSE,core->exception_pending);
+            if(core->exception_pending >= HS_RISC_V_OPCODES_EXCEPTION_NAME(CAUSE_MISALIGNED_LOAD) && core->exception_pending <= HS_RISC_V_OPCODES_EXCEPTION_NAME(CAUSE_STORE_ACCESS))
+            {
+                hs_risc_v_core_rv32_csr_write(core,CSR_MTVAL,load_or_store_addr);
+            }
+            else
+            {
+                hs_risc_v_core_rv32_csr_write(core,CSR_MTVAL,pc);
+            }
+            hs_risc_v_core_rv32_csr_write(core,CSR_MEPC,pc);
+            core->exception_pending=0;
+        }
+        else if(mie && core->interrupt_pending!=0)
+        {
+            hs_risc_v_core_rv32_csr_write(core,CSR_MCAUSE,core->interrupt_pending);
+            hs_risc_v_core_rv32_csr_write(core,CSR_MTVAL,0);
+            hs_risc_v_core_rv32_csr_write(core,CSR_MEPC,next_pc);
+            core->interrupt_pending=0;
+        }
+        else
+        {
+            skip_exception=true;
+        }
+
+        if(!skip_exception)
+        {
+            /*
+             * 将mie移动至mpie
+             */
+            mstatus |= ((mstatus&MSTATUS_MIE)!=0?MSTATUS_MPIE:0);
+            /*
+             * 清理mie
+             */
+            mstatus &=(~(MSTATUS_MIE));
+            /*
+             * MPP设置为3
+             */
+            mstatus |= (MSTATUS_MPP);
+            hs_risc_v_core_rv32_csr_write(core,CSR_MSTATUS,mstatus);
+            uint32_t mtvec=hs_risc_v_core_rv32_csr_read(core,CSR_MTVEC);
+            uint32_t mcause=hs_risc_v_core_rv32_csr_read(core,CSR_MCAUSE);
+            if((mtvec&0x03)!=0)
+            {
+                next_pc=(mtvec&(~(3ULL)));
+                if((mcause&(1ULL << 31))!=0)
+                {
+                    /*
+                     * 中断采用向量模式
+                     */
+                    next_pc+=4*(mcause &(~(1ULL << 31)));
+                }
+            }
+            else
+            {
+                next_pc=mtvec;
+            }
+            hs_risc_v_core_rv32_pc_write(core,next_pc);
+        }
+    }
+
+    /*
+     * 增加cycle
+     */
+    hs_risc_v_core_rv32_cycle_inc(core);
 }
 
 
@@ -1093,6 +1318,12 @@ void hs_risc_v_core_rv32_tick(hs_risc_v_core_rv32_t * core,size_t cycles)
     {
         return;
     }
+
+    /*
+     * 处理clint
+     */
+    hs_risc_v_core_rv32_exec_clint(core);
+
     while(cycles--)
     {
         core->io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_TICK_ENTER | (uint32_t)HS_RISC_V_CORE_RV32_IO_OPERATOR_HW,hs_risc_v_core_rv32_pc_read(core),(uint8_t*)&cycles,sizeof(cycles),core->usr);
@@ -1100,6 +1331,14 @@ void hs_risc_v_core_rv32_tick(hs_risc_v_core_rv32_t * core,size_t cycles)
         hs_risc_v_core_rv32_exec(core);
 
         core->io(core,(uint32_t)HS_RISC_V_CORE_RV32_IO_TICK_EXIT | (uint32_t)HS_RISC_V_CORE_RV32_IO_OPERATOR_HW,hs_risc_v_core_rv32_pc_read(core),(uint8_t*)&cycles,sizeof(cycles),core->usr);
+
+        if(core->flags.wfi_enable!=0)
+        {
+            /*
+             * WFI指令执行中，直接返回
+             */
+            break;
+        }
     };
 }
 
@@ -1196,13 +1435,98 @@ bool hs_risc_v_core_rv32_exception_raise(hs_risc_v_core_rv32_t *core,int cause,b
     {
         return false;
     }
+    bool ret=true;
     if(interrupt)
     {
-        core->interrupt_pending |= (1ULL<<cause);
+        /*
+         * 每次只能执行一个中断，无抢占
+         */
+        if(core->interrupt_pending ==0 )
+        {
+            core->interrupt_pending = (cause| (1ULL << 31));
+        }
+        else
+        {
+            ret=false;
+        }
     }
     else
     {
-        core->exception_pending |= (1ULL<<cause);
+        /*
+         * 每次只能等待一个异常
+         */
+        if(core->exception_pending ==0 )
+        {
+            core->exception_pending = (cause| (1ULL << 31));
+        }
+        else
+        {
+            ret=false;
+        }
     }
-    return false;
+    return ret;
+}
+
+bool hs_risc_v_core_rv32_exception_clear(hs_risc_v_core_rv32_t *core,bool interrupt)
+{
+    bool ret=false;
+    if(core == NULL)
+    {
+        return ret;
+    }
+    if(interrupt)
+    {
+        if(core->interrupt_pending!=0)
+        {
+            core->interrupt_pending=0;
+            ret=true;
+        }
+    }
+    else
+    {
+        if(core->exception_pending!=0)
+        {
+            core->exception_pending=0;
+            ret=true;
+        }
+    }
+    return ret;
+}
+
+
+bool hs_risc_v_core_rv32_wfi(hs_risc_v_core_rv32_t *core)
+{
+    bool ret=false;
+    if(core!=NULL)
+    {
+        ret=(core->flags.wfi_enable!=0);
+    }
+    return ret;
+}
+
+void hs_risc_v_core_rv32_wfi_clear(hs_risc_v_core_rv32_t *core)
+{
+    if(core!=NULL)
+    {
+        core->flags.wfi_enable=0;
+    }
+}
+
+uint64_t * hs_risc_v_core_rv32_clint_mtime(hs_risc_v_core_rv32_t *core)
+{
+    if(core!=NULL)
+    {
+        return &core->clint.mtime;
+    }
+    return NULL;
+}
+
+
+uint64_t * hs_risc_v_core_rv32_clint_mtimecmp(hs_risc_v_core_rv32_t *core)
+{
+    if(core!=NULL)
+    {
+        return &core->clint.mtimecmp;
+    }
+    return NULL;
 }
