@@ -1,0 +1,5 @@
+*.o
+.depend
+Make.dep
+.kconfig
+spiffs.bin

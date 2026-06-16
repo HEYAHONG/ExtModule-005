@@ -4,3 +4,9 @@
 [submodule "SOFT/BLE/SimpleBLE"]
 	path = SOFT/BLE/SimpleBLE
 	url = ../../HEYAHONG/SimpleBLE.git
+[submodule "FW/004-nuttx/nuttx"]
+	path = FW/004-nuttx/nuttx
+	url = https://github.com/apache/nuttx.git
+[submodule "FW/004-nuttx/apps"]
+	path = FW/004-nuttx/apps
+	url = https://github.com/apache/nuttx-apps.git
