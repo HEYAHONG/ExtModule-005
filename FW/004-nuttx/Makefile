@@ -1,6 +1,8 @@
 
 include .config
 
+PROJECT_ROOT := $(shell pwd)
+
 ESPTOOL_PORT ?= /dev/ttyUSB0
 ESPTOOL_BAUD ?= 115200
 ESPTOOL_BINDIR ?= $(shell pwd)/boot/
@@ -66,6 +68,7 @@ checkconfig:sourcecheck nuttx/.config
 sourcecheck:
 	@[ -f nuttx/Makefile ] || (git submodule update --init && echo 请使用git下载子模块)
 	@[ -f nuttx/Makefile ] || exit
+	@ln -sfT ${PROJECT_ROOT}/external ${PROJECT_ROOT}/apps/external
 
 nuttx/.config: sourcecheck
 	@./nuttx/tools/configure.sh   esp32-devkitc:cxx

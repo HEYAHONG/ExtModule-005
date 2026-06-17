@@ -1,0 +1,4 @@
+
+CONFIGURED_APPS += $(APPDIR)/external/hrc
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/../../3rdparty/HCppBox/master/hrc/}
+CXXFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/../../3rdparty/HCppBox/master/hrc/}
