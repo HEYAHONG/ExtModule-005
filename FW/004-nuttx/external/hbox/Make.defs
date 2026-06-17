@@ -1,0 +1,6 @@
+
+CONFIGURED_APPS += $(APPDIR)/external/hbox
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/../../3rdparty/HCppBox/master/hbox/}
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/../../3rdparty/HCppBox/master/hbox/cpp/}
+CXXFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/../../3rdparty/HCppBox/master/hbox/}
+CXXFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/../../3rdparty/HCppBox/master/hbox/cpp}
