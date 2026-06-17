@@ -1,0 +1,58 @@
+import os
+import sys
+from building import *
+
+# get current directory
+cwd = GetCurrentDir()
+
+#RC_FS的编号（同一次构建中多个程序需要hrc组件时保证资源文件不重复,通常用于test目录中的程序）
+HRC_RC_FS_PATH_NUM="1"
+if  'HRC_RC_FS_PATH_NUM' in os.environ:
+    HRC_RC_FS_PATH_NUM=os.environ['HRC_RC_FS_PATH_NUM']
+os.environ['HRC_RC_FS_PATH_NUM']=str(int(HRC_RC_FS_PATH_NUM)+1)
+
+
+#默认文件路径
+if not os.path.isdir(os.getcwd()+"/build/"):
+    os.mkdir(os.getcwd()+"/build/")
+
+HRC_RC_FS_PATH=os.getcwd()+"/build/RC_fs_"+HRC_RC_FS_PATH_NUM+".c"
+
+oldcwd=os.getcwd();
+
+#改变目录
+os.chdir(cwd)
+
+HRC_FSGEN=cwd+"/fsgen"
+
+#执行g++
+if not sys.platform.startswith("win32"):
+    HRC_FSGEN=cwd+"/build/fsgen_custom_"+sys.platform+"_"+HRC_RC_FS_PATH_NUM
+    Execute("g++ fsgen.cpp -static -static-libgcc  -o "+HRC_FSGEN)
+
+
+#生成RC_fs.c
+if 'HRC_FS_ROOT_DIR' in os.environ:
+    Execute(HRC_FSGEN+' '+os.environ['HRC_FS_ROOT_DIR']+' '+HRC_RC_FS_PATH)
+else:
+    Execute(HRC_FSGEN+' fs '+HRC_RC_FS_PATH)
+
+#恢复目录
+os.chdir(oldcwd)
+
+cflags=''
+
+# The set of source files associated with this SConscript file.
+src = Glob("RC.c")
+src+= Glob(HRC_RC_FS_PATH)
+
+path = [cwd, str(Dir('#'))]
+
+group = DefineGroup('HRC', src, depend = [''], CPPPATH = path,CFLAGS=cflags)
+
+list = os.listdir(cwd)
+for item in list:
+    if os.path.isfile(os.path.join(cwd, item, 'SConscript')):
+        group = group + SConscript(os.path.join(item, 'SConscript'))
+
+Return('group')
