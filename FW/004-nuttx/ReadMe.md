@@ -77,3 +77,9 @@ make distclean
 ```
 
 若此命令仍然不能解决问题（如Kconfig有误导致路径错误）,请直接删除nuttx/.config。
+
+# 测试截图
+
+## HBox
+
+![nuttx_hbox_base](image/nuttx_hbox_base.png)
