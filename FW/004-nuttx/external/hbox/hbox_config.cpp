@@ -12,9 +12,23 @@
 #include "syslog.h"
 #include "builtin/builtin.h"
 extern "C" int main(int argc, FAR char *argv[]);
-
+static bool g_hbox_init=false;
 int main(int argc, FAR char *argv[])
 {
+    {
+        if(g_hbox_init)
+        {
+            /*
+             * 只允许使用一个实例
+             */
+            syslog(LOG_INFO,"exiting!\r\n");
+            return -1;
+        }
+        g_hbox_init=true;
+        atexit([]() {
+            g_hbox_init=false;
+        });
+    }
     {
         const char *banner="";
         if(RCGetHandle("banner")!=NULL)
