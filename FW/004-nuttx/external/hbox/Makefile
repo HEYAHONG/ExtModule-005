@@ -10,4 +10,10 @@ CXXSRCS += $(wildcard ${HRC_ROOT_PATH}/cpp/*.cpp)
 CFLAGS += -Wno-shadow -Wno-undef -Wno-restrict
 CXXFLAGS += -Wno-shadow -Wno-undef -Wno-restrict
 
+MAINSRC = hbox_config.cpp
+
+PROGNAME = hbox
+PRIORITY = 100
+STACKSIZE = 4096
+
 include $(APPDIR)/Application.mk

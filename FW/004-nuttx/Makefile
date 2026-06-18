@@ -61,7 +61,7 @@ menuconfig:checkconfig
 	@cp -rf nuttx/.config  ./.config
 
 .PHONY:  checkconfig
-checkconfig:sourcecheck nuttx/.config
+checkconfig:sourcecheck nuttx/.config patchldscript
 
 
 .PHONY:  sourcecheck
@@ -74,6 +74,16 @@ nuttx/.config: sourcecheck
 	@./nuttx/tools/configure.sh   esp32-devkitc:cxx
 	@cp .config nuttx/.config
 
+nuttx/boards/xtensa/esp32/common/scripts/hbox_config.ld:sourcecheck
+	@cp external/hbox/hbox_config.ld  nuttx/boards/xtensa/esp32/common/scripts/hbox_config.ld
+
+.PHONY: patchldscript
+
+patchldscript: nuttx/boards/xtensa/esp32/common/scripts/hbox_config.ld
+	@cd nuttx && git checkout boards/xtensa/esp32/esp32-devkitc/scripts/Make.defs
+	@cat external/hbox/hbox_config.ld.patch >> nuttx/boards/xtensa/esp32/esp32-devkitc/scripts/Make.defs
+	@cd nuttx && git checkout tools/esp32/Config.mk
+	@sed -i "s/elf2image/elf2image --use-segments/g" nuttx/tools/esp32/Config.mk
 
 
 

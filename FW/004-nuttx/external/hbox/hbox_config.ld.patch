@@ -1,0 +1,1 @@
+ARCHSCRIPT += $(call FINDSCRIPT,hbox_config.ld)
