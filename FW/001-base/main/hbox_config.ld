@@ -6,7 +6,7 @@ SECTIONS
     . = ALIGN(4);
     mapping[flash_rodata]
     PROVIDE ( __hshell_command_start = ABSOLUTE(.) );
-    KEEP (*(.HShellCommand))
+    KEEP (*(SORT(.HShellCommand)))
     PROVIDE ( __hshell_command_end = ABSOLUTE(.) );
   } >default_rodata_seg
 
@@ -15,7 +15,7 @@ SECTIONS
     . = ALIGN(4);
     mapping[flash_rodata]
     PROVIDE ( __hruntime_init_start = ABSOLUTE(.) );
-    KEEP (*(.HRuntimeInit))
+    KEEP (*(SORT(.HRuntimeInit)))
     PROVIDE ( __hruntime_init_end = ABSOLUTE(.) );
   } >default_rodata_seg
 
@@ -24,7 +24,7 @@ SECTIONS
     . = ALIGN(4);
     mapping[flash_rodata]
     PROVIDE ( __hruntime_loop_start = ABSOLUTE(.) );
-    KEEP (*(.HRuntimeLoop))
+    KEEP (*(SORT(.HRuntimeLoop)))
     PROVIDE ( __hruntime_loop_end = ABSOLUTE(.) );
   } >default_rodata_seg
 
@@ -33,7 +33,7 @@ SECTIONS
     . = ALIGN(4);
 	mapping[flash_rodata]
     PROVIDE ( __hruntime_symbol_start = ABSOLUTE(.) );
-    KEEP (*(.HRuntimeSymbol))
+    KEEP (*(SORT(.HRuntimeSymbol)))
     PROVIDE ( __hruntime_symbol_end = ABSOLUTE(.) );
   } >default_rodata_seg
 
