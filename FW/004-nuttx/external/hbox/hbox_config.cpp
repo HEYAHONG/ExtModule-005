@@ -50,16 +50,37 @@ int main(int argc, FAR char *argv[])
 /*
  * 启动nsh
  */
+static int nsh_pid=0;
 static void  nsh_init(const hruntime_function_t *func)
 {
     syslog(LOG_INFO,"nsh init!");
     /*
      * 执行nsh
      */
-    if(exec_builtin("nsh",0,NULL,NULL) < 0)
+    if((nsh_pid=exec_builtin("nsh",0,NULL,NULL)) < 0)
     {
+        nsh_pid=0; //设置为0表示未初始化成功
         syslog(LOG_INFO,"nsh init failed!\r\n");
     }
 }
 HRUNTIME_INIT_EXPORT(nsh,255,nsh_init,NULL);
+static void  nsh_loop(const hruntime_function_t *func)
+{
+    if(nsh_pid > 0)
+    {
+        if(kill(nsh_pid,0) < 0)
+        {
+            /*
+             * 线程已退出
+             */
+            int pid=exec_builtin("sh",0,NULL,NULL);
+            if(pid > 0)
+            {
+                nsh_pid=pid;
+            }
+        }
+    }
+}
+HRUNTIME_LOOP_EXPORT(nsh,255,nsh_loop,NULL);
+
 
