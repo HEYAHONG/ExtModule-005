@@ -2,6 +2,12 @@
 
 本目录为采用[nuttx](https://nuttx.apache.org/)的基础模板。
 
+# 配置文件
+
+本工程支持采用[configs](configs)的预定义配置文件，现有如下配置文件：
+
+- [base_defconfig](configs/base_defconfig):基础配置文件，包含shell。
+
 
 # 编译环境
 
@@ -60,6 +66,13 @@ make putty ESPTOOL_PORT=串口设备 ESPTOOL_BAUD=波特率
 
 ```bash
 make menuconfig
+```
+
+除了手工配置，本工程还允许使用[configs](configs)目录中的预定义配置：
+
+```bash
+#设置为基础配置
+make base_defconfig
 ```
 
 ## 清理

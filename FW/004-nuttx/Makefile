@@ -1,5 +1,11 @@
 
+ifneq ($(wildcard .config),)
 include .config
+endif
+
+ifneq ($(wildcard nuttx/.config),)
+#include nuttx/.config
+endif
 
 PROJECT_ROOT := $(shell pwd)
 
@@ -72,7 +78,7 @@ sourcecheck:
 
 nuttx/.config: sourcecheck
 	@./nuttx/tools/configure.sh   esp32-devkitc:cxx
-	@cp .config nuttx/.config
+	@[ -f nuttx/.config ] || cp .config nuttx/.config
 
 nuttx/boards/xtensa/esp32/common/scripts/hbox_config.ld:sourcecheck
 	@cp external/hbox/hbox_config.ld  nuttx/boards/xtensa/esp32/common/scripts/hbox_config.ld
@@ -86,4 +92,6 @@ patchldscript: nuttx/boards/xtensa/esp32/common/scripts/hbox_config.ld
 	@sed -i "s/elf2image/elf2image --use-segments/g" nuttx/tools/esp32/Config.mk
 
 
-
+%defconfig: clean
+	@cp -f configs/$@ nuttx/.config
+	@cp -f configs/$@ .config
