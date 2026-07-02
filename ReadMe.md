@@ -8,6 +8,12 @@
 
 注意:本扩展模块一般不直接使用，一般直接嵌入实际电路设计中
 
+# 数据手册
+
+文件见[Doc](Doc)。
+
+- [esp32_datasheet_cn.pdf](Doc/esp32_datasheet_cn.pdf ) 
+
 # 目录结构
 - [HW](HW):硬件设计
 - [FW](FW):固件设计，主要为模块固件代码。

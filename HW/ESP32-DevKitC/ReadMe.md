@@ -1,6 +1,6 @@
 # 说明
 
-ESP32-DevKitC是espressif官方出品的核心板开发板，可用于固件验证。
+ESP32-DevKitC是[espressif](https://www.espressif.com)官方出品的核心板开发板，可用于固件验证。
 
 # 原理图
 
