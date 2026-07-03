@@ -131,3 +131,7 @@ LED引脚占用如下:
 ## HBox
 
 ![nuttx_hbox_base](image/nuttx_hbox_base.png)
+
+## WIFI
+
+![nuttx_hbox_wifi](image/nuttx_hbox_wifi.png)
