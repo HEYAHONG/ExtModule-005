@@ -41,7 +41,9 @@ int main(int argc, FAR char *argv[])
     while(true)
     {
         hcpprt_loop();
-        hthrd_yield();
+        {
+            usleep(1000);
+        }
     }
     return 0;
 }

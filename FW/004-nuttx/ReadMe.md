@@ -7,6 +7,7 @@
 本工程支持采用[configs](configs)的预定义配置文件，现有如下配置文件：
 
 - [base_defconfig](configs/base_defconfig):基础配置文件，包含shell。
+- [wifi_defconfig](configs/wifi_defconfig):WIFI配置文件，包含shell、wapi命令。
 
 
 # 编译环境
@@ -24,7 +25,7 @@ nuttx采用esp-idf的工具链编译,但不使用esp-idf的idf.py而是make，�
 对于ubuntu 22.04（及更新版本的ubuntu） 可采用以下指令安装(如缺少其它命令，请根据提示操作):
 
 ```bash
-sudo apt-get install build-essential make cmake python3-pip python3-venv curl wget kconfig-frontends git patch findutils sed
+sudo apt-get install build-essential make cmake python3-pip python3-venv curl wget kconfig-frontends git patch findutils diffutils sed
 ```
 
 # 编译
@@ -73,6 +74,9 @@ make menuconfig
 ```bash
 #设置为基础配置
 make base_defconfig
+
+#设置为WIFI配置
+make wifi_defconfig
 ```
 
 ## 清理
