@@ -5,7 +5,8 @@
 #
 # Classification (checked in this order):
 #   * a project containing CMakeLists.txt  -> ESP-IDF (idf.py build)
-#   * a project name containing "nuttx"    -> NuttX   (make)
+#   * a project name containing "nuttx"    -> NuttX   (make, one build per
+#                                            configs/*defconfig subproject)
 #   * a project name containing "zephyr"   -> Zephyr  (cmake, one build per
 #                                            subproject whose name starts
 #                                            with a digit)
@@ -220,21 +221,54 @@ build_esp_idf() {
 build_nuttx() {
     local name="$1"
     local dir="$2"
+    local -a configs=()
 
-    log "NuttX: ${name}"
-    if ! (
-        cd "${dir}" || exit 1
-        # shellcheck disable=SC1090
-        source "${IDF_ENV}" || exit 1
-        make -j"$(nproc)"
-    ); then
-        record_failure "${name}" "NuttX build failed"
+    # Each configs/*defconfig file is a separate subproject.  The subproject
+    # name is the file name with "defconfig" (and the separating underscore)
+    # removed, e.g. base_defconfig -> base.
+    mapfile -t configs < <(
+        find "${dir}/configs" -mindepth 1 -maxdepth 1 -type f \
+            -name '*defconfig' -printf '%f\n' |
+            sort -V
+    )
+
+    if [ "${#configs[@]}" -eq 0 ]; then
+        record_failure "${name}" "no *defconfig files found under ${dir}/configs"
         return 0
     fi
 
-    if ! package_nuttx "${name}" "${dir}"; then
-        record_failure "${name}" "NuttX packaging/publishing failed"
-    fi
+    local config_file
+    for config_file in "${configs[@]}"; do
+        local sub="${config_file%defconfig}"
+        sub="${sub%_}"
+        if [ -z "${sub}" ]; then
+            echo "warning: cannot derive subproject name from ${config_file}, skipping" >&2
+            continue
+        fi
+
+        local full_name="${name}-${sub}"
+        log "NuttX: ${full_name}"
+        if ! (
+            cd "${dir}" || exit 1
+            # shellcheck disable=SC1090
+            source "${IDF_ENV}" || exit 1
+
+            # Select the configuration for this subproject, then build.
+            # A clean failure must not prevent configuring/building.
+            make clean || echo "warning: make clean failed, continuing" >&2
+            make "${config_file}" || exit 1
+            make -j"$(nproc)"
+        ); then
+            record_failure "${full_name}" "NuttX build failed"
+            continue
+        fi
+
+        if ! package_nuttx "${full_name}" "${dir}"; then
+            record_failure "${full_name}" "NuttX packaging/publishing failed"
+            continue
+        fi
+    done
+
     return 0
 }
 
