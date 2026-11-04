@@ -254,8 +254,8 @@ build_nuttx() {
             source "${IDF_ENV}" || exit 1
 
             # Select the configuration for this subproject, then build.
-            # A clean failure must not prevent configuring/building.
-            make clean || echo "warning: make clean failed, continuing" >&2
+            # A distclean failure must not prevent configuring/building.
+            make distclean || echo "warning: make distclean failed, continuing" >&2
             make "${config_file}" || exit 1
             make -j"$(nproc)"
         ); then
