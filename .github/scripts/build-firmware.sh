@@ -69,7 +69,13 @@ archive_from_find() {
     shift 2
 
     local -a files=()
-    mapfile -d '' files < <(find "${base_dir}" -type f "$@" -printf '%P\0')
+    mapfile -d '' files < <(
+        # CMakeFiles only contains build-system metadata and compiler probes;
+        # never package anything from it.
+        find "${base_dir}" \
+            -type d -name CMakeFiles -prune -o \
+            -type f "$@" -printf '%P\0'
+    )
 
     if [ "${#files[@]}" -eq 0 ]; then
         die "No matching artifacts found under ${base_dir}"

@@ -62,7 +62,11 @@
 #define HTHRD_FREERTOS_TASK_HEADER     "freertos/task.h"
 #define HTHRD_FREERTOS_STACK_SIZE      (4096)
 
-
+/*
+ * 关闭部分不兼容的syscall
+ */
+#define HDEFAULTS_SYSCALL_NO_HMKDIR 1
+#define HDEFAULTS_SYSCALL_NO_HFSYNC 1
 
 
 #endif  // __HBOX_CONFIG_H__
