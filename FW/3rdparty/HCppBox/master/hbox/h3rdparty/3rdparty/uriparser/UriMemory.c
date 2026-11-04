@@ -44,10 +44,17 @@
 
 #include "UriConfig.h" /* for HAVE_REALLOCARRAY */
 
+// NOTE: Please keep this block in sync with its sibling in file
+//       `CMakeLists.txt`!
 #ifdef HAVE_REALLOCARRAY
 // For glibc >=2.29 of 2019-02-01
 #  if !defined(_DEFAULT_SOURCE)
 #    define _DEFAULT_SOURCE 1
+#  endif
+
+// For glibc <2.29
+#  if !defined(_GNU_SOURCE)
+#    define _GNU_SOURCE 1
 #  endif
 
 // For NetBSD (stdlib.h revision 1.122 of 2020-05-26)
@@ -309,6 +316,7 @@ int uriTestMemoryManagerEx(UriMemoryManager * memory, UriBool challengeAlignment
     }
     for (index = 0; index < callocTotalSize; index++) { /* all zeros? */
         if (buffer[index] != '\0') {
+            memory->free(memory, buffer);
             return URI_ERROR_MEMORY_MANAGER_FAULTY;
         }
     }
@@ -324,12 +332,15 @@ int uriTestMemoryManagerEx(UriMemoryManager * memory, UriBool challengeAlignment
     for (index = 0; index < mallocSize; index++) {
         buffer[index] = '\xF3';
     }
-    buffer = memory->realloc(memory, buffer, reallocSize);
-    if (buffer == NULL) {
+    void * const reallocBuffer = memory->realloc(memory, buffer, reallocSize);
+    if (reallocBuffer == NULL) {
+        memory->free(memory, buffer);
         return URI_ERROR_MEMORY_MANAGER_FAULTY;
     }
+    buffer = reallocBuffer;
     for (index = 0; index < mallocSize; index++) { /* previous content? */
         if (buffer[index] != '\xF3') {
+            memory->free(memory, buffer);
             return URI_ERROR_MEMORY_MANAGER_FAULTY;
         }
     }
@@ -370,12 +381,16 @@ int uriTestMemoryManagerEx(UriMemoryManager * memory, UriBool challengeAlignment
     for (index = 0; index < mallocSize; index++) {
         buffer[index] = '\xF7';
     }
-    buffer = memory->reallocarray(memory, buffer, reallocarrayNmemb, reallocarraySize);
-    if (buffer == NULL) {
+    char * const reallocarrayBuffer =
+            memory->reallocarray(memory, buffer, reallocarrayNmemb, reallocarraySize);
+    if (reallocarrayBuffer == NULL) {
+        memory->free(memory, buffer);
         return URI_ERROR_MEMORY_MANAGER_FAULTY;
     }
+    buffer = reallocarrayBuffer;
     for (index = 0; index < mallocSize; index++) { /* previous content? */
         if (buffer[index] != '\xF7') {
+            memory->free(memory, buffer);
             return URI_ERROR_MEMORY_MANAGER_FAULTY;
         }
     }

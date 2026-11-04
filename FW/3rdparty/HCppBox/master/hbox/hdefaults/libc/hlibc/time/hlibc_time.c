@@ -178,14 +178,19 @@ static bool hmktime_time_compare_eq(const htm_t *res1,const htm_t *res2)
         {
             return false;
         }
+        /*
         if(res1->tm_yday!=res2->tm_yday)
         {
             return false;
         }
+        */
+
+        /*
         if(res1->tm_wday!=res2->tm_wday)
         {
             return false;
         }
+        */
 
         /*
         if(res1->tm_isdst!=res2->tm_isdst)
@@ -307,7 +312,7 @@ htime_t hlibc_mktime(const htm_t *res)
             {
                 ret&=(~(1ULL <<  (HMKTIME_MAX_BITS-1-i)));
             }
-            if(i==(HMKTIME_MAX_BITS-1))
+            else if(i==(HMKTIME_MAX_BITS-1))
             {
                 ret=(uint64_t)-1;
             }
@@ -350,10 +355,12 @@ char * hlibc_asctime_r (const htm_t *tim_p,char * result)
     {
         return NULL;
     }
+    HDEFAULTS_RO_ATTRIBUTE
     static const char day_name[7][4] =
     {
         "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
     };
+    HDEFAULTS_RO_ATTRIBUTE
     static const char mon_name[12][4] =
     {
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -376,6 +383,7 @@ char * hlibc_ctime_r(const time_t * tim_p,char * result)
 /*
  * 全局时区信息，默认东8区，无夏令时
  */
+HDEFAULTS_RW_ATTRIBUTE
 static hlibc_time_timezone_info_t hlibc_time_timezone=
 {
     (int32_t)(-8*(int32_t)HLIBC_TIME_SECSPERHOUR),

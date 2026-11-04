@@ -31,12 +31,14 @@
 #include "wrapper/hmunmap.c"
 #include "wrapper/hmprotect.c"
 #include "wrapper/hclose.c"
+#include "wrapper/hfsync.c"
 #include "wrapper/hread.c"
 #include "wrapper/hwrite.c"
 #include "wrapper/hlseek.c"
 #include "wrapper/hopen.c"
 #include "wrapper/hfcntl.c"
 #include "wrapper/hopenat.c"
+#include "wrapper/hmkdir.c"
 #include "wrapper/hioctl.c"
 #include "wrapper/hclock_getres.c"
 #include "wrapper/hclock_gettime.c"
@@ -53,12 +55,14 @@
 #include "implementation/hmunmap.c"
 #include "implementation/hmprotect.c"
 #include "implementation/hclose.c"
+#include "implementation/hfsync.c"
 #include "implementation/hread.c"
 #include "implementation/hwrite.c"
 #include "implementation/hlseek.c"
 #include "implementation/hopen.c"
 #include "implementation/hfcntl.c"
 #include "implementation/hopenat.c"
+#include "implementation/hmkdir.c"
 #include "implementation/hioctl.c"
 #include "implementation/hclock_getres.c"
 #include "implementation/hclock_gettime.c"
@@ -99,6 +103,10 @@
 #undef HDEFAULTS_SYSCALL_HCLOSE
 #endif // HDEFAULTS_SYSCALL_NO_HCLOSE
 
+#ifdef HDEFAULTS_SYSCALL_NO_HFSYNC
+#undef HDEFAULTS_SYSCALL_HFSYNC
+#endif // HDEFAULTS_SYSCALL_NO_HFSYNC
+
 #ifdef HDEFAULTS_SYSCALL_NO_HREAD
 #undef HDEFAULTS_SYSCALL_HREAD
 #endif // HDEFAULTS_SYSCALL_NO_HREAD
@@ -122,6 +130,10 @@
 #ifdef HDEFAULTS_SYSCALL_NO_HOPENAT
 #undef HDEFAULTS_SYSCALL_HOPENAT
 #endif // HDEFAULTS_SYSCALL_NO_HOPENAT
+
+#ifdef HDEFAULTS_SYSCALL_NO_HMKDIR
+#undef HDEFAULTS_SYSCALL_HMKDIR
+#endif // HDEFAULTS_SYSCALL_NO_HMKDIR
 
 #ifdef HDEFAULTS_SYSCALL_NO_HIOCTL
 #undef HDEFAULTS_SYSCALL_HIOCTL
@@ -201,6 +213,13 @@ hdefaults_syscall_function_t hdefaults_syscall_function_find(uintptr_t number)
     }
     break;
 #endif
+#ifdef HDEFAULTS_SYSCALL_HFSYNC
+    case HDEFAULTS_SYSCALL_HFSYNC:
+    {
+        ret=__hdefaults_usercall_hfsync;
+    }
+    break;
+#endif
 #ifdef HDEFAULTS_SYSCALL_HREAD
     case HDEFAULTS_SYSCALL_HREAD:
     {
@@ -243,6 +262,13 @@ hdefaults_syscall_function_t hdefaults_syscall_function_find(uintptr_t number)
     }
     break;
 #endif
+#ifdef HDEFAULTS_SYSCALL_HMKDIR
+    case HDEFAULTS_SYSCALL_HMKDIR:
+    {
+        ret=__hdefaults_usercall_hmkdir;
+    }
+    break;
+#endif
 #ifdef HDEFAULTS_SYSCALL_HIOCTL
     case HDEFAULTS_SYSCALL_HIOCTL:
     {
@@ -273,6 +299,9 @@ hdefaults_syscall_function_t hdefaults_syscall_function_find(uintptr_t number)
 #endif
     default:
     {
+#ifdef  HDEFAULTS_SYSCALL_FUNCTION_FIND_DEFAULT
+        ret=HDEFAULTS_SYSCALL_FUNCTION_FIND_DEFAULT(number);
+#endif // HDEFAULTS_SYSCALL_FUNCTION_FIND_DEFAULT
     }
     break;
     }
@@ -314,10 +343,14 @@ void hdefaults_syscall_init(void)
 void hdefaults_syscall_loop(void)
 {
 
+    uint64_t seconds=hdefaults_tick_get()/1000;
+    (void)seconds;
+
 #if !defined(HDEFAULTS_SYSCALL_NO_IMPLEMENTATION) && !defined(HDEFAULTS_SYSCALL_NO_HGETTIMEOFDAY) && !defined(HGETTIMEOFDAY) && !defined(HSYSCALL_GETTIMEOFDAY_UPDATE)
     /*
      * 调用一次hgettimeofday更新内部时间
      */
+    if((seconds/3600)==0)
     {
         hgettimeofday_timeval_t tv;
         hgettimeofday_timezone_t tz;
@@ -329,8 +362,9 @@ void hdefaults_syscall_loop(void)
     /*
      * 更新内部单调时钟时间
      */
+    if((seconds/3600)==0)
     {
-        htimespec_t tp={0};
+        htimespec_t tp= {0};
         hclock_gettime(HCLOCK_MONOTONIC,&tp);
     }
 #endif

@@ -27,6 +27,7 @@ enum
     HRUNTIME_INTERNAL_FLAG_END
 };
 
+HDEFAULTS_ZI_ATTRIBUTE
 static hatomic_int_t hruntime_internal_flag[(((size_t)HRUNTIME_INTERNAL_FLAG_END)+sizeof(hatomic_int_t)*8-1)/(sizeof(hatomic_int_t)*8)]= {0};
 
 static void hruntime_internal_flag_set(size_t flag)
@@ -90,6 +91,7 @@ void hruntime_init_hdefaults(void)
 #define HRUNTIME_INIT_LOWLEVEL_LIST4
 #endif
 
+HDEFAULTS_RO_ATTRIBUTE
 static const hruntime_internal_function_t hruntime_internal_function_init_lowlevel[]=
 {
 #ifndef HRUNTIME_NO_H3RDPARTY
@@ -171,6 +173,11 @@ void hruntime_init_hsoftplc(void)
 #define HRUNTIME_INIT_LIST4
 #endif
 
+#if defined(HOPENBLT) && !defined(HRUNTIME_NO_SOFTPLC)
+void BootInit(void);
+#endif
+
+HDEFAULTS_RO_ATTRIBUTE
 static const hruntime_internal_function_t hruntime_internal_function_init[]=
 {
     hruntime_init_section,
@@ -182,6 +189,9 @@ static const hruntime_internal_function_t hruntime_internal_function_init[]=
     HRUNTIME_INIT_LIST2
     HRUNTIME_INIT_LIST3
     HRUNTIME_INIT_LIST4
+#if defined(HOPENBLT) && !defined(HRUNTIME_NO_SOFTPLC)
+    BootInit,
+#endif
     NULL
 };
 
@@ -222,7 +232,7 @@ bool hruntime_init_done(void)
 void hruntime_loop_section(void)
 {
 #ifdef HRUNTIME_USING_LOOP_SECTION
-#ifdef HRUNTIME_USING_LOOP_SECTION_CACHE
+#if defined(HRUNTIME_USING_LOOP_SECTION_CACHE) && !defined(HRUNTIME_PRIORITY_TINY)
     HRUNTIME_LOOP_CACHE_INVOKE();
 #else
     HRUNTIME_LOOP_INVOKE();
@@ -321,6 +331,11 @@ void hruntime_loop_hsoftplc(void)
 #define HRUNTIME_LOOP_LIST4
 #endif
 
+#if defined(HOPENBLT) && !defined(HRUNTIME_NO_SOFTPLC)
+void BootTask(void);
+#endif
+
+HDEFAULTS_RO_ATTRIBUTE
 static const hruntime_internal_function_t hruntime_internal_function_loop[]=
 {
     hruntime_loop_section,
@@ -345,6 +360,9 @@ static const hruntime_internal_function_t hruntime_internal_function_loop[]=
     HRUNTIME_LOOP_LIST2
     HRUNTIME_LOOP_LIST3
     HRUNTIME_LOOP_LIST4
+#if defined(HOPENBLT) && !defined(HRUNTIME_NO_SOFTPLC)
+    BootTask,
+#endif
     NULL
 };
 
@@ -408,6 +426,25 @@ void hruntime_loop_enable_softwatchdog(bool enable)
     }
 }
 
+#if defined(HRUNTIME_PRIORITY_TINY) && (defined(HCOMPILER_ARMCC) || defined(HCOMPILER_ARMCLANG))
+
+#if defined(HRUNTIME_USING_INIT_SECTION)
+__SECTION("HRuntimeInit" HRUNTIME_PRIORITY_SECTION_NAME(HRUNTIME_PRIORITY_S ) )
+const hruntime_function_t hruntime_init_section_start={0};
+
+__SECTION("HRuntimeInit" HRUNTIME_PRIORITY_SECTION_NAME(HRUNTIME_PRIORITY_E ) )
+const hruntime_function_t hruntime_init_section_end={0};
+#endif
+
+#if defined(HRUNTIME_USING_LOOP_SECTION)
+ __SECTION("HRuntimeLoop" HRUNTIME_PRIORITY_SECTION_NAME(HRUNTIME_PRIORITY_S ) )
+const hruntime_function_t hruntime_loop_section_start={0};
+
+ __SECTION("HRuntimeLoop" HRUNTIME_PRIORITY_SECTION_NAME(HRUNTIME_PRIORITY_E ) )
+const hruntime_function_t hruntime_loop_section_end={0};
+#endif
+
+#endif
 void hruntime_function_array_invoke(const hruntime_function_t *array_base,size_t array_size)
 {
     if(array_base==NULL || array_size == 0)
@@ -462,10 +499,27 @@ void hruntime_function_array_invoke(const hruntime_function_t *array_base,size_t
 
 }
 
+void hruntime_function_array_invoke_ignore_priority(const hruntime_function_t *array_base,size_t array_size)
+{
+    if(array_base==NULL || array_size==0)
+    {
+        return;
+    }
+    for(size_t i=0;i<array_size;i++)
+    {
+        if(array_base[i].entry!=NULL)
+        {
+            array_base[i].entry(&array_base[i]);
+        }
+    }
+}
+
 #if defined(HRUNTIME_USING_LOOP_CACHE_TABLE)
 #ifndef HRUNTIME_USING_LOOP_CACHE_TABLE_ITEM_COUNT
 #define HRUNTIME_USING_LOOP_CACHE_TABLE_ITEM_COUNT   16
 #endif
+
+HDEFAULTS_ZI_ATTRIBUTE
 static hruntime_function_t hruntime_loop_cache_table[HRUNTIME_USING_LOOP_CACHE_TABLE_ITEM_COUNT]= {0};
 
 static void hruntime_loop_cache_table_sort(hruntime_function_t *array_base,size_t array_size)
@@ -628,6 +682,7 @@ bool hruntime_function_loop_cache_table_remove(const hruntime_function_t * hrunt
 #include "symbol/hbox_h3rdparty_symbol.c"
 #include "symbol/libc_symbol.c"
 
+HDEFAULTS_RO_ATTRIBUTE
 const struct
 {
     const hruntime_symbol_t *   array_base;
@@ -704,8 +759,8 @@ const hruntime_symbol_t *hruntime_symbol_find(const char *name)
 #ifdef HRUNTIME_USING_SYMBOL_SECTION
 #if defined(HCOMPILER_ARMCC) || defined(HCOMPILER_ARMCLANG)
         {
-            array_base=(hruntime_symbol_t *)&HRuntimeLoop$$Base;
-            array_size=(((uintptr_t)(hruntime_symbol_t *)&HRuntimeLoop$$Limit)-((uintptr_t)(hruntime_symbol_t *)&HRuntimeLoop$$Base))/sizeof(hruntime_symbol_t);
+            array_base=(hruntime_symbol_t *)&HRuntimeSymbol$$Base;
+            array_size=(((uintptr_t)(hruntime_symbol_t *)&HRuntimeSymbol$$Limit)-((uintptr_t)(hruntime_symbol_t *)&HRuntimeSymbol$$Base))/sizeof(hruntime_symbol_t);
         }
 #elif  defined(HCOMPILER_GCC) || defined(HCOMPILER_CLANG)
         {
@@ -730,6 +785,7 @@ const hruntime_symbol_t *hruntime_symbol_find(const char *name)
     return ret;
 }
 
+HDEFAULTS_ZI_ATTRIBUTE
 static hdoublylinkedlist_head_t hruntime_symbol_dynamic_table_list_head= {0};
 typedef struct
 {
@@ -932,8 +988,8 @@ size_t hruntime_symbol_enum(uint32_t type,hruntime_symbol_enum_callback_t callba
 #ifdef HRUNTIME_USING_SYMBOL_SECTION
 #if defined(HCOMPILER_ARMCC) || defined(HCOMPILER_ARMCLANG)
         {
-            array_base=(hruntime_symbol_t *)&HRuntimeLoop$$Base;
-            array_size=(((uintptr_t)(hruntime_symbol_t *)&HRuntimeLoop$$Limit)-((uintptr_t)(hruntime_symbol_t *)&HRuntimeLoop$$Base))/sizeof(hruntime_symbol_t);
+            array_base=(hruntime_symbol_t *)&HRuntimeSymbol$$Base;
+            array_size=(((uintptr_t)(hruntime_symbol_t *)&HRuntimeSymbol$$Limit)-((uintptr_t)(hruntime_symbol_t *)&HRuntimeSymbol$$Base))/sizeof(hruntime_symbol_t);
         }
 #elif  defined(HCOMPILER_GCC) || defined(HCOMPILER_CLANG)
         {
