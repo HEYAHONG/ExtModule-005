@@ -1,0 +1,85 @@
+# Build every firmware project under FW/ on Ubuntu and publish snapshot
+# archives to the "testing" GitHub release.  Modelled after the hplatformbox
+# workflow from HCppBox, but extended to build all firmware projects
+# sequentially.
+name: ubuntu firmware build
+
+on:
+  push:
+    tags: [testing]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+  IDF_TARGET: esp32
+  IDF_GITHUB_ASSETS: dl.espressif.com/github_assets
+  ZEPHYR_BOARD: esp32_devkitc/esp32/procpu
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:main
+      # The image's default user does not own the runner workspace.
+      options: --user root
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository and all submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Ensure all submodules are initialized
+        run: git submodule update --init --recursive --jobs 8
+
+      - name: Install host build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -f \
+            build-essential make cmake ninja-build python3 python3-pip \
+            python3-venv kconfig-frontends curl wget xz-utils file gh
+
+      - name: Install ESP-IDF tools for ESP32
+        run: |
+          cd "$GITHUB_WORKSPACE/FW/3rdparty/esp-idf"
+          ./install.sh esp32
+
+      - name: Create sourceable ESP-IDF environment helper
+        run: |
+          cat > "$GITHUB_WORKSPACE/FW/esp-idf-env.sh" <<'ENVEOF'
+          #!/usr/bin/env bash
+          # CI helper: load the ESP-IDF build environment.
+          # Unlike the developer helper, this file is safe to source from a
+          # non-interactive shell (it does not exec an interactive shell).
+          _env_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          export IDF_PATH="${_env_dir}/3rdparty/esp-idf"
+          export IDF_GITHUB_ASSETS="${IDF_GITHUB_ASSETS:-dl.espressif.com/github_assets}"
+          export IDF_TARGET="${IDF_TARGET:-esp32}"
+          # shellcheck disable=SC1091
+          . "${IDF_PATH}/export.sh" >/dev/null
+          unset _env_dir
+          ENVEOF
+          chmod +x "$GITHUB_WORKSPACE/FW/esp-idf-env.sh"
+
+      - name: Prepare Zephyr workspace and ESP32 support
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE/FW/005-zephyr"
+          west init -m https://github.com/zephyrproject-rtos/zephyr --mr v4.4-branch .
+          west update --narrow -o=--depth=1
+          west packages pip --install
+          west blobs fetch hal_espressif
+          echo "ZEPHYR_BASE=$PWD/zephyr" >> "$GITHUB_ENV"
+          echo "ZEPHYR_SDK_INSTALL_DIR=$(ls -d /opt/toolchains/zephyr-sdk-* | head -n 1)" >> "$GITHUB_ENV"
+          echo "ZEPHYR_TOOLCHAIN_VARIANT=zephyr" >> "$GITHUB_ENV"
+
+      - name: Build all firmware and publish snapshots
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/build-firmware.sh"
