@@ -24,6 +24,7 @@ FW_DIR="${ROOT}/FW"
 DIST_DIR="${ROOT}/dist"
 IDF_ENV="${FW_DIR}/esp-idf-env.sh"
 ZEPHYR_BOARD="${ZEPHYR_BOARD:-esp32_devkitc/esp32/procpu}"
+ZEPHYR_VENV_BIN="${ZEPHYR_VENV_BIN:-/opt/python/venv}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 
 export IDF_TARGET="${IDF_TARGET:-esp32}"
@@ -297,10 +298,10 @@ build_zephyr() {
             # shellcheck disable=SC1090
             source "${IDF_ENV}" || exit 1
 
-            # ESP-IDF prepends its own Python environment.  Zephyr must use the
-            # image's Zephyr environment (west, pyelftools, ...), so restore it
-            # to the front of PATH after sourcing the ESP-IDF environment.
-            export PATH="/opt/python/venv/bin:${PATH}"
+            # ESP-IDF prepends its own Python environment.  Zephyr must use its
+            # own venv (west, pyelftools, ...), so restore it to the front of
+            # PATH after sourcing the ESP-IDF environment.
+            export PATH="${ZEPHYR_VENV_BIN}/bin:${PATH}"
 
             export ZEPHYR_BASE="${dir}/zephyr"
             export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
