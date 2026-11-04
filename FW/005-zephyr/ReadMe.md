@@ -68,5 +68,5 @@ west flash  -d [生成的文件存放目录]
 # 目录说明
 
 - [001-base](001-base):基础应用
-- [002-wifi](002-wifi):基础应用
+- [002-wifi](002-wifi):基础WiFi应用
 
