@@ -15,6 +15,12 @@ env:
   IDF_GITHUB_ASSETS: dl.espressif.com/github_assets
   ZEPHYR_BOARD: esp32_devkitc/esp32/procpu
 
+# The container's /bin/sh is dash, which does not support `set -o pipefail`.
+# Force bash for every run step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: ubuntu-latest
