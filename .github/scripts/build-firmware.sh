@@ -7,7 +7,8 @@
 #   * a project containing CMakeLists.txt  -> ESP-IDF (idf.py build)
 #   * a project name containing "nuttx"    -> NuttX   (make)
 #   * a project name containing "zephyr"   -> Zephyr  (cmake, one build per
-#                                            numeric+letter subproject)
+#                                            subproject whose name starts
+#                                            with a digit)
 #
 # The script is intentionally sequential: it does not use a GitHub Actions
 # build matrix, so projects are always built in the same numeric order.
@@ -241,16 +242,48 @@ build_zephyr() {
     local dir="$2"
     local -a subprojects=()
 
+    # Only directories whose names start with a digit are Zephyr
+    # subprojects; everything else (build/, modules/, tools/, zephyr/, ...)
+    # is part of the workspace and must be ignored.
     mapfile -t subprojects < <(
         find "${dir}" -mindepth 1 -maxdepth 1 -type d \
-            -regextype posix-extended -regex '.*/[0-9]+[-_A-Za-z].*' \
-            -printf '%f\n' |
+            -name '[0-9]*' -printf '%f\n' |
             sort -V
     )
 
     if [ "${#subprojects[@]}" -eq 0 ]; then
-        record_failure "${name}" "no numeric+letter subprojects found"
+        record_failure "${name}" "no digit-prefixed subprojects found"
         return 0
+    fi
+
+    # west searches upward from the current directory.  If a stray .west was
+    # ever created inside the build tree (for example by running west init in
+    # build/), it shadows the real workspace and the "blobs" extension becomes
+    # unavailable.  Remove any such workspace before configuring.
+    if [ -d "${dir}/build" ]; then
+        find "${dir}/build" -name .west -type d -prune \
+            -exec rm -rf {} + 2>/dev/null || true
+    fi
+
+    # Normally created by the workflow's prepare step.  Recreate it here as a
+    # fallback so a missing/stale workspace does not prevent the build.
+    if [ ! -d "${dir}/.west" ]; then
+        log "Initializing west workspace for ${name}"
+        if ! (
+            if [ -d "${dir}/zephyr" ]; then
+                west init -l "${dir}/zephyr" || exit 1
+            else
+                west init -m https://github.com/zephyrproject-rtos/zephyr \
+                    --mr v4.4-branch "${dir}" || exit 1
+            fi
+            cd "${dir}" || exit 1
+            west update --narrow -o=--depth=1 || exit 1
+            west packages pip --install || exit 1
+            west blobs fetch hal_espressif
+        ); then
+            record_failure "${name}" "west workspace initialization failed"
+            return 0
+        fi
     fi
 
     local sub
@@ -284,6 +317,25 @@ build_zephyr() {
             fi
 
             rm -rf "${build_dir}" || exit 1
+            mkdir -p "${build_dir}" || exit 1
+
+            # Make sure west resolves the real workspace (not an accidental
+            # .west inside build/) and can load Zephyr's "blobs" extension
+            # before CMake starts.  This gives a clear error instead of the
+            # cryptic zephyr_blobs_verify failure otherwise.
+            found_topdir="$(cd "${build_dir}" && west topdir 2>/dev/null)" || {
+                echo "error: west cannot find a workspace from ${build_dir}" >&2
+                exit 1
+            }
+            if [ "$(realpath "${found_topdir}")" != "$(realpath "${dir}")" ]; then
+                echo "error: west resolved workspace ${found_topdir}, expected ${dir}" >&2
+                exit 1
+            fi
+            if ! (cd "${build_dir}" && west blobs list hal_espressif >/dev/null 2>&1); then
+                echo "error: west blobs extension is not available from ${build_dir}" >&2
+                exit 1
+            fi
+
             # The applications are documented to be built with sysbuild.  Use
             # Zephyr's sysbuild CMake entry point directly so that both the
             # bootloader and the application are produced (and packaged).

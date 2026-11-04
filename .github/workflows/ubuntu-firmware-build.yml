@@ -77,7 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE/FW/005-zephyr"
-          west init -m https://github.com/zephyrproject-rtos/zephyr --mr v4.4-branch .
+          west init -m https://github.com/zephyrproject-rtos/zephyr --mr v4.4-branch "$PWD"
           west update --narrow -o=--depth=1
           west packages pip --install
           west blobs fetch hal_espressif
